@@ -356,3 +356,31 @@ window.closeRenameModal = () => dom.renameModal.classList.add('hidden');
 window.uploadModel = uploadModel;
 window.clearHistory = clearHistory;
 window.confirmRename = confirmRename;
+
+// ====== 侧边栏折叠/展开逻辑 ======
+window.toggleSidebar = function(btn) {
+    const container = btn.closest('.app-container');
+    if (!container) return;
+    
+    const sidebar = container.querySelector('.sidebar');
+    const openBtn = container.querySelector('.open-sidebar-btn');
+    
+    if (sidebar.classList.contains('collapsed')) {
+        // 展开
+        sidebar.classList.remove('collapsed');
+        if (openBtn) {
+            openBtn.classList.remove('visible');
+        }
+    } else {
+        // 折叠
+        sidebar.classList.add('collapsed');
+        if (openBtn) {
+            // 等待折叠动画差不多完成再显示打开按钮
+            setTimeout(() => {
+                if (sidebar.classList.contains('collapsed')) {
+                    openBtn.classList.add('visible');
+                }
+            }, 250); 
+        }
+    }
+};

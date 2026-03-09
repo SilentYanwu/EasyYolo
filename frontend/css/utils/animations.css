@@ -72,3 +72,60 @@
     border-top-color: white;
     animation: spin 0.8s linear infinite;
 }
+
+/* 侧边栏开闭动画（类似ChatGPT边栏侧滑特效） */
+.sidebar {
+    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1), padding 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
+    will-change: width, padding, opacity;
+}
+
+.sidebar.collapsed {
+    width: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    transform: translateX(-20px);
+}
+
+/* 隐藏打开和关闭按钮的状态 */
+.open-sidebar-btn {
+    transition: opacity 0.3s, transform 0.3s;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #a1a1aa;
+    padding: 6px;
+    border-radius: 8px;
+    /* 始终保持 display: inline-flex 占据空间，避免标题跳动 */
+    display: inline-flex;
+    opacity: 0;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+}
+.open-sidebar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.open-sidebar-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    animation: fadeIn 0.3s ease-out;
+}
+.sidebar-close-btn {
+    transition: background-color 0.2s, color 0.2s;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #a1a1aa;
+    padding: 6px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
