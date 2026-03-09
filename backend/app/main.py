@@ -1,0 +1,222 @@
+import os
+import shutil
+import uuid
+from datetime import datetime 
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi import Body
+from fastapi import Form
+
+# 引入配置和业务服务
+from core.config import settings
+from services.yolo_service import yolo_service
+from services.db_service import db_service # 导入新写的DB服务
+
+
+current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
+app = FastAPI(title="YOLOv11 Web System")
+
+# CORS 配置
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 挂载静态目录
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+
+@app.get("/models")
+def get_models():
+    """扫描文件夹，返回所有可用模型"""
+    models = {
+        "raw": [],
+        "yolo": [],
+        "trained": []
+    }
+    
+    # 遍历配置好的文件夹
+    for category, path in settings.MODEL_DIRS.items():
+        if os.path.exists(path):
+            files = [f for f in os.listdir(path) if f.endswith('.pt')]
+            models[category] = files
+            
+    return {"models": models, "current_model": current_model_name}
+
+@app.post("/switch_model")
+def switch_model(model_name: str = Form(...), category: str = Form(...)):
+    """切换模型"""
+    global current_model_name
+    try:
+        yolo_service.load_model(model_name, category)
+        current_model_name = model_name # 更新全局状态
+        return {"status": "success", "current_model": model_name}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/")
+def read_root():
+    return {"message": "YOLO System Ready", "models_path": settings.MODELS_ROOT}
+
+@app.post("/upload_model")
+async def upload_model(file: UploadFile = File(...), custom_name: str = Form(...)):
+    """上传并重命名模型到 yolo 目录"""
+    # 强制加上 .pt 后缀
+    if not custom_name.endswith(".pt"):
+        custom_name += ".pt"
+    
+    save_path = os.path.join(settings.MODEL_DIRS['yolo'], custom_name)
+    
+    # 保存文件
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"status": "success", "filename": custom_name}
+
+@app.post("/rename_model")
+def rename_model(
+    old_name: str = Body(...), 
+    new_name: str = Body(...), 
+    category: str = Body(...)
+):
+    """重命名模型文件"""
+    # 1. 安全检查：禁止重命名 raw 目录下的官方模型
+    if category == "raw":
+        raise HTTPException(status_code=403, detail="禁止修改内置基础模型")
+    
+    # 2. 检查后缀
+    if not new_name.endswith(".pt"):
+        new_name += ".pt"
+        
+    # 3. 获取路径
+    dir_path = settings.MODEL_DIRS.get(category)
+    if not dir_path:
+        raise HTTPException(status_code=400, detail="未知类别")
+        
+    old_path = os.path.join(dir_path, old_name)
+    new_path = os.path.join(dir_path, new_name)
+    
+    # 4. 执行重命名
+    if not os.path.exists(old_path):
+        raise HTTPException(status_code=404, detail="原模型文件不存在")
+        
+    if os.path.exists(new_path):
+        raise HTTPException(status_code=400, detail="新名称已存在，请换一个")
+        
+    try:
+        os.rename(old_path, new_path)
+        
+        # 如果当前正在使用的模型被改名了，更新全局变量
+        global current_model_name
+        if current_model_name == old_name:
+            current_model_name = new_name
+            
+        # 数据库里的历史记录也要同步更新 model_name 字段！
+        # 这一步建议加上，否则改名后历史记录就丢了
+        from services.db_service import db_service
+        # 调用更新方法
+        db_service.update_model_name(old_name, new_name)
+            
+        return {"status": "success", "new_name": new_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/delete_model")
+def delete_model(model_name: str, category: str):
+    """删除模型文件"""
+    if category == "raw":
+        raise HTTPException(status_code=403, detail="禁止删除内置基础模型")
+        
+    dir_path = settings.MODEL_DIRS.get(category)
+    file_path = os.path.join(dir_path, model_name)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="模型文件不存在")
+        
+    try:
+        os.remove(file_path)
+        
+        # 如果删除了当前模型，重置为默认模型
+        global current_model_name
+        if current_model_name == model_name:
+            current_model_name = settings.DEFAULT_MODEL_NAME
+            # 重新加载默认模型
+            yolo_service.load_model(current_model_name, "raw")
+            
+        # 删除对应的数据库历史记录
+        db_service.clear_history(model_name)
+            
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/history")
+def get_history_api(model_name: str):
+    return db_service.get_history(model_name)
+
+@app.delete("/history")
+def clear_history_api(model_name: str):
+    db_service.clear_history(model_name)
+    return {"status": "cleared"}
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    # 1. 验证
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File is not an image")
+
+    # 2. 准备路径
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    unique_filename = f"{timestamp}_{file.filename}"
+    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
+    
+    # 3. 保存原始图片
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 4. 调用服务进行推理
+    result_filename = f"result_{unique_filename}"
+    result_path = os.path.join(settings.RESULT_DIR, result_filename)
+
+    # 生成URL (保持之前的逻辑)
+    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
+    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
+
+    try:
+        # 调用服务
+        detections_json = yolo_service.predict_image(
+            source_path=file_path, 
+            save_path=result_path, 
+            conf=0.25
+        )
+        # 记录到数据库
+        db_service.add_record(current_model_name, original_url, result_url)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # 5. 返回结果
+    return {
+        "original_url": f"http://127.0.0.1:8000/static/uploads/{unique_filename}",
+        "result_url": f"http://127.0.0.1:8000/static/results/{result_filename}",
+        "detections": detections_json
+    }
+
+# 新增：切换模型的接口（为前端侧边栏准备）
+@app.post("/switch_model")
+async def switch_model(model_name: str, category: str):
+    """
+    前端点击侧边栏模型时调用此接口
+    """
+    try:
+        yolo_service.load_model(model_name, category)
+        return {"message": f"Successfully switched to {model_name} ({category})"}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

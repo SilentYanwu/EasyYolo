@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Yolo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 全局顶部导航栏 -->
+    <header class="global-header">
+        <div class="logo">EASY YOLO</div>
+        <nav class="top-nav">
+            <!-- 传参 this 是为了在 JS 里方便给他加高亮样式 -->
+            <button class="top-nav-btn active" onclick="switchPage('inference', this)">YOLO识别</button>
+            <button class="top-nav-btn" onclick="switchPage('training', this)">YOLO训练</button>
+            <button class="top-nav-btn" onclick="switchPage('details', this)">YOLO模型详情</button>
+        </nav>
+    </header>
+
+    <!-- ==================== 页面 1：YOLO 识别 ==================== -->
+    <div id="page-inference" class="app-container">
+        <!-- 侧边栏：识别专用 -->
+        <aside class="sidebar">
+            <div class="model-section">
+                <h3>内置模型 (Raw)</h3>
+                <div id="raw-model-list" class="model-list"></div>
+                
+                <h3>导入的模型 (Yolo)</h3>
+                <div id="yolo-model-list" class="model-list"></div>
+                
+                <button class="btn-outline" onclick="openUploadModal()">+ 导入新模型</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区：识别专用 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>图像识别推理</h1>
+            </header>
+            <div class="workspace">
+                <div class="control-panel">
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                    <button class="btn primary" onclick="document.getElementById('imageInput').click()">上传图片</button>
+                    <button class="btn success" id="predictBtn" disabled>开始识别</button>
+                    <span id="statusText">等待上传...</span>
+                </div>
+                <div class="display-area">
+                     <div class="image-box">
+                        <div class="box-header">
+                                <h4>原始图片</h4>
+                        </div>
+                        <div class="img-wrapper"><img id="originalImg" src="" alt="暂无图片"></div>
+                    </div>
+
+                                    <!-- 右侧：识别结果 -->
+                    <div class="image-box">
+                                        <!-- 【关键修改】用 box-header 包裹标题和按钮 -->
+                        <div class="box-header">
+                        <h4>识别结果</h4>
+                                    <a id="downloadLink" href="#" class="btn download-btn" style="display:none;">下载结果</a>
+                        </div>
+                    <div class="img-wrapper"><img id="resultImg" src="" alt="等待结果"></div>
+                    </div>
+                </div>
+
+                <!-- 历史记录面板 -->
+                <div class="history-panel">
+                    <div class="panel-header">
+                        <h3>历史记录 (当前模型: <span id="currentModelName">加载中...</span>)</h3>
+                        <button class="btn-text" onclick="clearHistory()">清空记录</button>
+                    </div>
+                    <div class="history-grid" id="historyGrid"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== 页面 2：YOLO 训练 (占位版) ==================== -->
+    <div id="page-training" class="app-container" style="display: none;">
+        <!-- 侧边栏：训练专用 -->
+        <aside class="sidebar">
+            <div class="model-section">
+                <h3>训练任务管理</h3>
+                <div class="model-item active">新建训练任务</div>
+                <div class="model-item">历史训练记录</div>
+            </div>
+        </aside>
+        <!-- 主内容区：训练专用 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>模型训练工作台</h1>
+            </header>
+            <div class="workspace" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <img src="https://cdn-icons-png.flaticon.com/512/2083/2083213.png" width="100" style="opacity: 0.3; margin-bottom: 20px;">
+                <h2 style="color: #94a3b8;">后端训练模块正在开发中...</h2>
+                <p style="color: #cbd5e1;">这里将提供数据集上传、超参数调节（学习率、Epochs等）以及训练进度展示功能。</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== 页面 3：YOLO 模型详情 (占位版) ==================== -->
+    <div id="page-details" class="app-container" style="display: none;">
+        <!-- 侧边栏：详情专用 -->
+        <aside class="sidebar">
+            <div class="model-section">
+                <h3>已训练模型库</h3>
+                <div class="model-item">PCB板缺陷检测 V1</div>
+                <div class="model-item">钢材表面检测 V2</div>
+            </div>
+        </aside>
+        <!-- 主内容区：详情专用 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>模型评估与详情</h1>
+            </header>
+            <div class="workspace" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3052/3052825.png" width="100" style="opacity: 0.3; margin-bottom: 20px;">
+                <h2 style="color: #94a3b8;">图表评估系统正在开发中...</h2>
+                <p style="color: #cbd5e1;">这里将展示 F1-Score、mAP 折线图、混淆矩阵以及该模型的训练超参数历史。</p>
+            </div>
+        </main>
+    </div>
+    
+    <div id="uploadModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>导入模型</h3>
+            <input type="file" id="modelFile" accept=".pt">
+            <input type="text" id="modelName" placeholder="重命名 (例如: steel_v1)">
+            <div class="modal-actions">
+                <button onclick="closeUploadModal()">取消</button>
+                <button onclick="uploadModel()" class="btn primary">确定导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重命名模态框 -->
+    <div id="renameModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>重命名模型</h3>
+            <input type="text" id="renameInput" placeholder="新名称">
+            <input type="hidden" id="oldNameHidden">
+            <input type="hidden" id="categoryHidden">
+            <div class="modal-actions">
+                <button onclick="closeRenameModal()">取消</button>
+                <button onclick="confirmRename()" class="btn primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

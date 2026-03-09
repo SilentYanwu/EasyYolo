@@ -1,0 +1,140 @@
+/* 模态框 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+    animation: fadeIn 0.3s;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--panel-bg);
+    padding: 25px;
+    border-radius: var(--radius-md);
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s;
+}
+
+.modal-content h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-dark);
+    font-size: 1.2rem;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="file"] {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    transition: border-color var(--transition-fast);
+}
+
+.modal-content input[type="text"]:focus,
+.modal-content input[type="file"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 删除确认模态框 */
+.delete-confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(3px);
+}
+
+.delete-confirm-modal.hidden {
+    display: none;
+}
+
+.delete-confirm-content {
+    background: var(--panel-bg);
+    padding: 25px;
+    border-radius: var(--radius-md);
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s;
+}
+
+.delete-confirm-content h3 {
+    margin: 0;
+    color: var(--danger-color);
+    font-size: 1.2rem;
+}
+
+.delete-confirm-content p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.delete-confirm-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all var(--transition-fast);
+}
+
+.delete-confirm-actions .btn-cancel {
+    background-color: #e2e8f0;
+    color: var(--text-dark);
+}
+
+.delete-confirm-actions .btn-cancel:hover {
+    background-color: #cbd5e1;
+}
+
+.delete-confirm-actions .btn-cancel:active {
+    transform: scale(0.97);
+}
+
+.delete-confirm-actions .btn-delete {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.delete-confirm-actions .btn-delete:hover {
+    background-color: var(--danger-hover);
+}
+
+.delete-confirm-actions .btn-delete:active {
+    background-color: var(--danger-active);
+    transform: scale(0.97);
+}

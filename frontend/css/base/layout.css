@@ -1,0 +1,147 @@
+.app-container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    background-color: var(--main-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.top-bar {
+    background: var(--panel-bg);
+    padding: 0 30px;
+    border-bottom: 1px solid var(--border-color);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.top-bar h1 {
+    font-size: 1.5rem;
+    color: var(--text-dark);
+}
+
+.workspace {
+    padding: 30px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.control-panel {
+    background: var(--panel-bg);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+.display-area {
+    display: flex;
+    gap: 20px;
+    min-height: 500px;
+    margin-bottom: 20px; 
+}
+
+.image-box {
+    flex: 1;
+    background: var(--panel-bg);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.img-wrapper {
+    flex: 1;
+    background: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+}
+
+.img-wrapper img {
+    max-width: 100%;
+    max-height: 100%; 
+    object-fit: contain; 
+    display: none;
+}
+
+.img-wrapper img[src] {
+    display: block;
+}
+
+.global-header {
+    height: 60px;
+    background-color: #16264a; /* 深夜蓝背景 */
+    display: flex;
+    align-items: center;
+    padding: 0 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 100;
+    flex-shrink: 0; /* 防止被挤压 */
+}
+
+.global-header .logo {
+    color: white;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-right: 50px;
+    letter-spacing: 1px;
+}
+
+.top-nav {
+    display: flex;
+    gap: 15px;
+}
+
+.top-nav-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    padding: 10px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.top-nav-btn:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.top-nav-btn.active {
+    color: white;
+    background-color: var(--primary-color);
+    box-shadow: var(--shadow-md);
+}
+
+.box-header {
+    display: flex;
+    justify-content: space-between; /* 标题在左，按钮在右 */
+    align-items: center; /* 垂直居中对齐 */
+    margin-bottom: 15px;
+    height: 40px; /* 固定一个高度，防止按钮出现时整个盒子抖动 */
+}
+
+.box-header h4 {
+    margin: 0; /* 清除 h4 默认的上下边距，因为外面的 header 已经有 height 了 */
+    color: var(--text-dark);
+}
