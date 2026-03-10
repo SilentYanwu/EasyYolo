@@ -24,7 +24,6 @@ const dom = {
     renameInput: document.getElementById('renameInput'),
     oldNameHidden: document.getElementById('oldNameHidden'),
     categoryHidden: document.getElementById('categoryHidden'),
-    // 批量导入相关
     thumbnailPreview: document.getElementById('thumbnailPreview'),
     batchProgress: document.getElementById('batchProgress'),
     progressFill: document.getElementById('progressFill'),

@@ -14,7 +14,7 @@ from fastapi import Form
 from core.config import settings
 from services.yolo_service import yolo_service
 from services.db_service import db_service
-from services.batch_service import batch_predict_generator
+from services.inference_service import batch_predict_generator, handle_single_predict
 
 
 current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
@@ -172,43 +172,15 @@ async def predict(file: UploadFile = File(...)):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File is not an image")
 
-    # 2. 准备路径
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    unique_filename = f"{timestamp}_{file.filename}"
-    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename) # 原始图片保存路径
-    
-    # 3. 保存原始图片
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # 4. 调用服务进行推理
-    result_filename = f"result_{unique_filename}"
-    result_path = os.path.join(settings.RESULT_DIR, result_filename)
-
-    # 生成URL
-    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
-    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
-
     try:
-        # 调用YOLO服务
-        detections_json = yolo_service.predict_image(
-            source_path=file_path, 
-            save_path=result_path, 
-            conf=0.25
-        )
-        # 调用数据库服务，记录历史
-        db_service.add_record(current_model_name, original_url, result_url)
+        # 2. 调用封装好的服务函数（包含保存、推理和存库）
+        result = await handle_single_predict(file, current_model_name)
+        return result
+        
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-    # 5. 返回结果
-    return {
-        "original_url": f"http://127.0.0.1:8000/static/uploads/{unique_filename}",
-        "result_url": f"http://127.0.0.1:8000/static/results/{result_filename}",
-        "detections": detections_json
-    }
 
 # 批量推理接口
 @app.post("/predict_batch")

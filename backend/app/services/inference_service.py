@@ -1,10 +1,10 @@
 """
-batch_service.py — 批量推理服务（生产者-消费者队列）
+inference_service.py — 识别流程封装服务
 
 职责：
-  1. 接收多张图片文件，放入 asyncio.Queue（生产者）
-  2. 逐张取出推理并写入数据库（消费者）
-  3. 通过 SSE 实时推送进度和结果
+1.识别单张图片
+2.识别多张图片
+
 """
 
 import os
@@ -19,7 +19,7 @@ from services.yolo_service import yolo_service
 from services.db_service import db_service
 
 
-async def _save_upload_file(file: UploadFile) -> tuple[str, str]:
+async def save_upload_file(file: UploadFile) -> tuple[str, str]:
     """
     保存上传文件到 uploads 目录，返回 (文件磁盘路径, 唯一文件名)
     """
@@ -33,9 +33,9 @@ async def _save_upload_file(file: UploadFile) -> tuple[str, str]:
     return file_path, unique_filename
 
 
-def _predict_single(file_path: str, unique_filename: str, conf: float = 0.25) -> dict:
+def predict_single(file_path: str, unique_filename: str, conf: float = 0.25) -> dict:
     """
-    同步推理单张图片（将在线程中执行）
+    同步推理单张图片
     返回包含 URL 和检测结果的字典
     """
     result_filename = f"result_{unique_filename}"
@@ -55,6 +55,28 @@ def _predict_single(file_path: str, unique_filename: str, conf: float = 0.25) ->
         "result_url": result_url,
         "detections": detections_json,
     }
+
+
+async def handle_single_predict(file: UploadFile, model_name: str, conf: float = 0.25) -> dict:
+    """
+    封装单张图片的完整流程：保存 -> 推理 -> 存库
+    """
+    # 1. 保存文件
+    file_path, unique_filename = await save_upload_file(file)
+
+    # 2. 推理 (使用 to_thread 防止阻塞主线程)
+    result = await asyncio.to_thread(
+        predict_single, file_path, unique_filename, conf
+    )
+
+    # 3. 写入数据库
+    db_service.add_record(
+        model_name,
+        result["original_url"],
+        result["result_url"]
+    )
+
+    return result
 
 
 async def batch_predict_generator(
@@ -86,11 +108,11 @@ async def batch_predict_generator(
 
         try:
             # 保存文件
-            file_path, unique_filename = await _save_upload_file(file)
+            file_path, unique_filename = await save_upload_file(file)
 
             # 在线程中执行 CPU/GPU 密集的推理
             result = await asyncio.to_thread(
-                _predict_single, file_path, unique_filename
+                predict_single, file_path, unique_filename
             )
 
             # 写入数据库
