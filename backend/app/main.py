@@ -1,17 +1,20 @@
 import os
 import shutil
 import uuid
+from typing import List
 from datetime import datetime 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from fastapi import Body
 from fastapi import Form
 
 # 引入配置和业务服务
 from core.config import settings
 from services.yolo_service import yolo_service
-from services.db_service import db_service # 导入新写的DB服务
+from services.db_service import db_service
+from services.batch_service import batch_predict_generator
 
 
 current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
@@ -161,6 +164,38 @@ def get_history_api(model_name: str):
 def clear_history_api(model_name: str):
     db_service.clear_history(model_name)
     return {"status": "cleared"}
+@app.post("/predict_batch")
+async def predict_batch(files: List[UploadFile] = File(...)):
+    """
+    批量推理接口（生产者-消费者模式 + SSE 实时推送）
+    上限 99 张图片，逐张推理并推送进度
+    """
+    # 校验数量上限
+    if len(files) > 99:
+        raise HTTPException(
+            status_code=400,
+            detail="单次最多支持 99 张图片"
+        )
+
+    # 过滤非图片文件
+    valid_files = []
+    for f in files:
+        if f.content_type and f.content_type.startswith("image/"):
+            valid_files.append(f)
+
+    if not valid_files:
+        raise HTTPException(status_code=400, detail="未找到有效的图片文件")
+
+    return StreamingResponse(
+        batch_predict_generator(valid_files, current_model_name),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     # 1. 验证

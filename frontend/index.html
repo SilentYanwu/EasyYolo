@@ -59,11 +59,26 @@
             </header>
             <div class="workspace">
                 <div class="control-panel">
-                    <input type="file" id="imageInput" accept="image/*" hidden>
+                    <input type="file" id="imageInput" accept="image/*" multiple hidden>
                     <button class="btn primary" onclick="document.getElementById('imageInput').click()">上传图片</button>
                     <button class="btn success" id="predictBtn" disabled>开始识别</button>
                     <span id="statusText">等待上传...</span>
                 </div>
+
+                <!-- 缩略图预览区（选择多张图片时显示） -->
+                <div id="thumbnailPreview" class="thumbnail-preview" style="display:none;"></div>
+
+                <!-- 批量进度条（识别过程中显示） -->
+                <div id="batchProgress" class="batch-progress" style="display:none;">
+                    <div class="progress-info">
+                        <span class="progress-label">批量识别中</span>
+                        <span id="progressText" class="progress-text">0/0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+
                 <div class="display-area">
                     <div class="image-box">
                         <div class="box-header">
@@ -74,7 +89,6 @@
 
                     <!-- 右侧：识别结果 -->
                     <div class="image-box">
-                        <!-- 【关键修改】用 box-header 包裹标题和按钮 -->
                         <div class="box-header">
                             <h4>识别结果</h4>
                             <a id="downloadLink" href="#" class="btn download-btn" style="display:none;">下载结果</a>

@@ -33,7 +33,7 @@ class DBService:
         conn.close()
 
     def add_record(self, model_name, original_url, result_url):
-        """添加记录并保持每个模型最多20条"""
+        """添加记录并保持每个模型最多99条"""
         conn = self._get_conn()
         cursor = conn.cursor()
         
@@ -47,17 +47,17 @@ class DBService:
         cursor.execute('SELECT count(*) FROM inference_history WHERE model_name = ?', (model_name,))
         count = cursor.fetchone()[0]
         
-        # 3. 如果超过20条，删除最旧的
-        if count > 20:
-            # 找到该模型最旧的那些记录并删除（保留最新的20条）
-            # SQLite删除逻辑：删除那些 不在（按时间倒序排列的前20条）里的ID
+        # 3. 如果超过99条，删除最旧的
+        if count > 99:
+            # 找到该模型最旧的那些记录并删除（保留最新的99条）
+            # SQLite删除逻辑：删除那些 不在（按时间倒序排列的前99条）里的ID
             cursor.execute('''
                 DELETE FROM inference_history 
                 WHERE id NOT IN (
                     SELECT id FROM inference_history 
                     WHERE model_name = ? 
                     ORDER BY id DESC 
-                    LIMIT 20
+                    LIMIT 99
                 ) AND model_name = ?
             ''', (model_name, model_name))
             
