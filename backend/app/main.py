@@ -164,6 +164,53 @@ def get_history_api(model_name: str):
 def clear_history_api(model_name: str):
     db_service.clear_history(model_name)
     return {"status": "cleared"}
+
+# 单张图片推理接口
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    # 1. 验证
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File is not an image")
+
+    # 2. 准备路径
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    unique_filename = f"{timestamp}_{file.filename}"
+    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename) # 原始图片保存路径
+    
+    # 3. 保存原始图片
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 4. 调用服务进行推理
+    result_filename = f"result_{unique_filename}"
+    result_path = os.path.join(settings.RESULT_DIR, result_filename)
+
+    # 生成URL
+    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
+    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
+
+    try:
+        # 调用YOLO服务
+        detections_json = yolo_service.predict_image(
+            source_path=file_path, 
+            save_path=result_path, 
+            conf=0.25
+        )
+        # 调用数据库服务，记录历史
+        db_service.add_record(current_model_name, original_url, result_url)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # 5. 返回结果
+    return {
+        "original_url": f"http://127.0.0.1:8000/static/uploads/{unique_filename}",
+        "result_url": f"http://127.0.0.1:8000/static/results/{result_filename}",
+        "detections": detections_json
+    }
+
+# 批量推理接口
 @app.post("/predict_batch")
 async def predict_batch(files: List[UploadFile] = File(...)):
     """
@@ -195,52 +242,7 @@ async def predict_batch(files: List[UploadFile] = File(...)):
         }
     )
 
-
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
-    # 1. 验证
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File is not an image")
-
-    # 2. 准备路径
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    unique_filename = f"{timestamp}_{file.filename}"
-    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
-    
-    # 3. 保存原始图片
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # 4. 调用服务进行推理
-    result_filename = f"result_{unique_filename}"
-    result_path = os.path.join(settings.RESULT_DIR, result_filename)
-
-    # 生成URL (保持之前的逻辑)
-    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
-    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
-
-    try:
-        # 调用服务
-        detections_json = yolo_service.predict_image(
-            source_path=file_path, 
-            save_path=result_path, 
-            conf=0.25
-        )
-        # 记录到数据库
-        db_service.add_record(current_model_name, original_url, result_url)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # 5. 返回结果
-    return {
-        "original_url": f"http://127.0.0.1:8000/static/uploads/{unique_filename}",
-        "result_url": f"http://127.0.0.1:8000/static/results/{result_filename}",
-        "detections": detections_json
-    }
-
-# 新增：切换模型的接口（为前端侧边栏准备）
+# 切换模型的接口
 @app.post("/switch_model")
 async def switch_model(model_name: str, category: str):
     """

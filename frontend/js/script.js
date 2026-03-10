@@ -1,12 +1,13 @@
 /**
  * 全局配置与状态
+ * 后端地址
  */
 const API_BASE = "http://127.0.0.1:8000";
 let currentModelName = "";
 let currentCategory = "";
 let activeMenuId = null; // 用于记录当前哪个菜单是打开的
 
-// DOM 元素引用
+// DOM 元素统一引用
 const dom = {
     imageInput: document.getElementById('imageInput'),
     originalImg: document.getElementById('originalImg'),
@@ -32,6 +33,7 @@ const dom = {
 
 // 缩略图最大显示数量
 const MAX_THUMBNAILS = 8;
+
 /**
  * 页面切换控制 (SPA 路由模拟)
  */
@@ -68,7 +70,7 @@ window.onload = async function () {
 };
 
 /**
- * 2. 模型列表管理 (核心修改部分)
+ * 2. 模型列表管理
  */
 async function loadModelList() {
     try {
@@ -307,9 +309,9 @@ async function predictSingle(file) {
         const res = await fetch(`${API_BASE}/predict`, { method: 'POST', body: formData });
         if (!res.ok) throw new Error();
         const data = await res.json();
-        dom.resultImg.src = data.result_url;
-        dom.downloadLink.href = data.result_url;
-        dom.downloadLink.style.display = 'inline-block';
+        dom.resultImg.src = data.result_url; // 显示结果图片
+        dom.downloadLink.href = data.result_url; // 下载链接
+        dom.downloadLink.style.display = 'inline-block';// 显示下载按钮
         dom.statusText.innerText = '完成';
         loadHistory(currentModelName);
     } catch (error) {
