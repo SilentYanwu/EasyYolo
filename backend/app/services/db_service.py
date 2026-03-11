@@ -26,11 +26,29 @@ class DBService:
                 model_name TEXT NOT NULL,
                 original_url TEXT,
                 result_url TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT (datetime('now', 'localtime'))
             )
         ''')
         conn.commit()
         conn.close()
+
+    def _delete_physical_files(self, original_url, result_url):
+        """删除硬盘上的物理文件"""
+        try:
+            # 从 URL 中提取文件名
+            if original_url:
+                ori_name = original_url.split("/")[-1]
+                ori_path = os.path.join(settings.UPLOAD_DIR, ori_name)
+                if os.path.exists(ori_path):
+                    os.remove(ori_path)
+            
+            if result_url:
+                res_name = result_url.split("/")[-1]
+                res_path = os.path.join(settings.RESULT_DIR, res_name)
+                if os.path.exists(res_path):
+                    os.remove(res_path)
+        except Exception as e:
+            print(f"Error deleting files: {e}")
 
     def add_record(self, model_name, original_url, result_url):
         """添加记录并保持每个模型最多99条"""
@@ -43,14 +61,23 @@ class DBService:
             VALUES (?, ?, ?)
         ''', (model_name, original_url, result_url))
         
-        # 2. 检查记录数量
-        cursor.execute('SELECT count(*) FROM inference_history WHERE model_name = ?', (model_name,))
-        count = cursor.fetchone()[0]
+        # 2. 检查记录数量并获取要删除的旧记录的文件路径
+        cursor.execute('''
+            SELECT original_url, result_url FROM inference_history 
+            WHERE model_name = ? AND id NOT IN (
+                SELECT id FROM inference_history 
+                WHERE model_name = ? 
+                ORDER BY id DESC 
+                LIMIT 99
+            )
+        ''', (model_name, model_name))
+        old_files = cursor.fetchall()
         
-        # 3. 如果超过99条，删除最旧的
-        if count > 99:
-            # 找到该模型最旧的那些记录并删除（保留最新的99条）
-            # SQLite删除逻辑：删除那些 不在（按时间倒序排列的前99条）里的ID
+        # 3. 如果超过99条，删除物理文件并清理数据库
+        if old_files:
+            for ori_u, res_u in old_files:
+                self._delete_physical_files(ori_u, res_u)
+
             cursor.execute('''
                 DELETE FROM inference_history 
                 WHERE id NOT IN (
@@ -64,12 +91,28 @@ class DBService:
         conn.commit()
         conn.close()
 
+    def delete_record(self, record_id):
+        """删除单条记录及对应文件"""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        
+        # 获取文件路径
+        cursor.execute("SELECT original_url, result_url FROM inference_history WHERE id = ?", (record_id,))
+        row = cursor.fetchone()
+        
+        if row:
+            self._delete_physical_files(row[0], row[1])
+            cursor.execute("DELETE FROM inference_history WHERE id = ?", (record_id,))
+            conn.commit()
+        
+        conn.close()
+
     def get_history(self, model_name):
         """获取某模型的历史记录"""
         conn = self._get_conn()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT original_url, result_url, created_at 
+            SELECT id, original_url, result_url, created_at 
             FROM inference_history 
             WHERE model_name = ? 
             ORDER BY id DESC
@@ -77,7 +120,7 @@ class DBService:
         rows = cursor.fetchall()
         conn.close()
         # 转为字典列表返回
-        return [{"original": r[0], "result": r[1], "time": r[2]} for r in rows]
+        return [{"id": r[0], "original": r[1], "result": r[2], "time": r[3]} for r in rows]
 
     def update_model_name(self, old_name, new_name):
         """更新模型名称"""
@@ -92,10 +135,18 @@ class DBService:
         conn.close()
 
     def clear_history(self, model_name):
+        """清空某模型所有记录及文件"""
         conn = self._get_conn()
         cursor = conn.cursor()
+        
+        # 获取所有文件
+        cursor.execute("SELECT original_url, result_url FROM inference_history WHERE model_name = ?", (model_name,))
+        rows = cursor.fetchall()
+        for r in rows:
+            self._delete_physical_files(r[0], r[1])
+            
         cursor.execute('DELETE FROM inference_history WHERE model_name = ?', (model_name,))
         conn.commit()
         conn.close()
 
-db_service = DBService()
+db_service = DBService()

@@ -56,10 +56,11 @@ def switch_model(model_name: str = Form(...), category: str = Form(...)):
     try:
         yolo_service.load_model(model_name, category)
         current_model_name = model_name # 更新全局状态
-        return {"status": "success", "current_model": model_name}
+        return {"status": "success", "current_model": current_model_name}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# 根目录
 @app.get("/")
 def read_root():
     return {"message": "YOLO System Ready", "models_path": settings.MODELS_ROOT}
@@ -118,7 +119,6 @@ def rename_model(
             current_model_name = new_name
             
         # 数据库里的历史记录也要同步更新 model_name 字段！
-        # 这一步建议加上，否则改名后历史记录就丢了
         from services.db_service import db_service
         # 调用更新方法
         db_service.update_model_name(old_name, new_name)
@@ -156,14 +156,25 @@ def delete_model(model_name: str, category: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# 历史记录接口
 @app.get("/history")
 def get_history_api(model_name: str):
     return db_service.get_history(model_name)
 
+# 清空历史记录接口
 @app.delete("/history")
 def clear_history_api(model_name: str):
     db_service.clear_history(model_name)
-    return {"status": "cleared"}
+    return {"status": "all cleared"}
+
+@app.delete("/history/{record_id}")
+def delete_single_history(record_id: int):
+    """删除单条历史记录"""
+    try:
+        db_service.delete_record(record_id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 单张图片推理接口
 @app.post("/predict")

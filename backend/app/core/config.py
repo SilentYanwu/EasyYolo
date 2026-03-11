@@ -1,7 +1,7 @@
 import os
 
 class Settings:
-    # 1. 定位项目根目录 YoloWebSystem/
+    # 1. 定位项目根目录 EasyYolo/
     # __file__ 是 config.py，往上找 3 层到达 backend 外面
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 

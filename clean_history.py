@@ -11,7 +11,8 @@ def clear_target_folders():
     # 要清空的两个文件夹路径
     folders_to_clear = [
         os.path.join(base_dir, "backend", "static", "results"),
-        os.path.join(base_dir, "backend", "static", "uploads")
+        os.path.join(base_dir, "backend", "static", "uploads"),
+        os.path.join(base_dir, "database")
     ]
 
     for folder_path in folders_to_clear:

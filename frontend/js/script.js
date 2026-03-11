@@ -181,7 +181,10 @@ async function switchModel(name, category) {
     // 如果已经选中，就不刷新了，防止闪烁
     if (name === currentModelName) return;
 
-    dom.statusText.innerText = `正在切换...`;
+    // 开始识别前重置状态
+    dom.resultImg.src = "";
+    dom.downloadLink.style.display = 'none';
+    dom.statusText.innerText = "正在识别...";
 
     const formData = new FormData();
     formData.append('model_name', name);
@@ -299,6 +302,8 @@ dom.predictBtn.addEventListener('click', async function () {
  * 单张推理
  */
 async function predictSingle(file) {
+    dom.resultImg.src = ""; // 重置结果图，显示占位符
+    dom.downloadLink.style.display = 'none'; // 隐藏旧的下载链接
     dom.statusText.innerText = '识别中...';
     dom.predictBtn.disabled = true;
     const formData = new FormData();
@@ -324,6 +329,8 @@ async function predictSingle(file) {
  * 批量推理：通过 SSE 事件流读取后端进度
  */
 async function startBatchPredict(files) {
+    dom.resultImg.src = ""; // 重置结果图
+    dom.downloadLink.style.display = 'none';
     dom.predictBtn.disabled = true;
     dom.statusText.innerText = '批量识别中...';
 
@@ -505,15 +512,35 @@ async function loadHistory(modelName) {
         history.forEach(item => {
             const div = document.createElement('div');
             div.className = 'history-item';
-            div.innerHTML = `<img src="${item.result}"><span>${item.time.substring(5, 16).replace('T', ' ')}</span>`;
+            div.innerHTML = `
+                <img src="${item.result}">
+                <span>${item.time.substring(5, 16).replace('T', ' ')}</span>
+                <div class="delete-record-btn" title="删除该记录" onclick="deleteHistoryItem(event, ${item.id})">×</div>
+            `;
             div.onclick = () => viewHistoryImage(item.result, item.original);
             dom.historyGrid.appendChild(div);
         });
     } catch (e) { }
 }
 
+async function deleteHistoryItem(event, recordId) {
+    event.stopPropagation(); // 阻止触发查看大图
+    if (!confirm("确定删除该条记录吗？")) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/history/${recordId}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadHistory(currentModelName);
+        } else {
+            alert("删除失败");
+        }
+    } catch (e) {
+        alert("网络错误");
+    }
+}
+
 async function clearHistory() {
-    if (!confirm("清空记录？")) return;
+    if (!confirm("清空当前模型的记录？")) return;
     await fetch(`${API_BASE}/history?model_name=${currentModelName}`, { method: 'DELETE' });
     loadHistory(currentModelName);
 }
@@ -552,7 +579,7 @@ window.toggleSidebar = function (btn) {
         // 折叠
         sidebar.classList.add('collapsed');
         if (openBtn) {
-            // 等待折叠动画差不多完成再显示打开按钮
+            // 等待折叠动画完成再显示打开按钮
             setTimeout(() => {
                 if (sidebar.classList.contains('collapsed')) {
                     openBtn.classList.add('visible');
