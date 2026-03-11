@@ -1,7 +1,7 @@
 ============================================================
 项目结构: EasyYolo
-生成时间: 2026-03-10 15:49:36
-统计信息: 20 个文件夹, 31 个文件
+生成时间: 2026-03-11 17:33:19
+统计信息: 20 个文件夹, 32 个文件
 ============================================================
 
 EasyYolo/
@@ -15,17 +15,17 @@ EasyYolo/
 │   │   │   └── config.py (1.2 KB)
 │   │   ├── services/
 │   │   │   ├── __init__.py (0 B)
-│   │   │   ├── batch_service.py (4.0 KB)
 │   │   │   ├── db_service.py (3.4 KB)
-│   │   │   └── yolo_service.py (2.4 KB)
+│   │   │   ├── inference_service.py (4.4 KB)
+│   │   │   └── yolo_service.py (2.1 KB)
 │   │   ├── __init__.py (0 B)
-│   │   └── main.py (8.6 KB)
+│   │   └── main.py (7.6 KB)
 │   ├── static/
 │   │   ├── results/
 │   │   └── uploads/
 │   └── __init__.py (2.0 B)
 ├── database/
-│   └── yolo_app.db (12.0 KB)
+│   └── yolo_app.db (32.0 KB)
 ├── frontend/
 │   ├── assets/
 │   ├── css/
@@ -52,10 +52,11 @@ EasyYolo/
 │   │   └── yolo11s.pt (18.4 MB)
 │   ├── trained/
 │   └── yolo/
+├── README.md (315.0 B)
 ├── clean_history.py (1.5 KB)
 ├── generate_structure.py (6.1 KB)
-├── 日志.txt (212.0 B)
-└── 项目结构.txt (2.3 KB)
+├── 日志.md (1.4 KB)
+└── 项目结构.txt (2.5 KB)
 
 ============================================================
 忽略的文件夹/文件:
