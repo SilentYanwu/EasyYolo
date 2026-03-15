@@ -235,6 +235,45 @@
         </div>
     </div>
 
+    <!-- 删除确认模态框 -->
+    <div id="deleteModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>确认删除模型</h3>
+            <p id="deleteModalText">确定要删除模型 <span id="deleteModelName"></span> 吗？</p>
+            <input type="hidden" id="deleteModelNameHidden">
+            <input type="hidden" id="deleteCategoryHidden">
+            <div class="modal-actions">
+                <button onclick="closeDeleteModal()">取消</button>
+                <button onclick="confirmDelete()" class="btn primary">确定删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清空历史记录模态框 -->
+    <div id="clearHistoryModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>确认清空历史记录</h3>
+            <p>确定要清空所有历史记录吗？此操作不可恢复。</p>
+            <div class="modal-actions">
+                <button onclick="closeClearHistoryModal()">取消</button>
+                <button onclick="confirmClearHistory()" class="btn primary">确定清空</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除单条历史记录模态框 -->
+    <div id="deleteHistoryModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>确认删除历史记录</h3>
+            <p>确定要删除这条历史记录吗？</p>
+            <input type="hidden" id="deleteHistoryIdHidden">
+            <div class="modal-actions">
+                <button onclick="closeDeleteHistoryModal()">取消</button>
+                <button onclick="confirmDeleteHistory()" class="btn primary">确定删除</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 

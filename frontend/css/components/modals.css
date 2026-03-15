@@ -5,13 +5,14 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    backdrop-filter: blur(3px);
-    animation: fadeIn 0.3s;
+    backdrop-filter: blur(4px);
+    animation: modalFadeIn 0.3s ease-out;
+    cursor: pointer; /* 提示可以点击关闭 */
 }
 
 .modal.hidden {
@@ -20,14 +21,135 @@
 
 .modal-content {
     background: var(--panel-bg);
-    padding: 25px;
-    border-radius: var(--radius-md);
-    width: 400px;
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 450px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.3s;
+    gap: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: default; /* 内容区域不继承父级的cursor */
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-content h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.modal-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.modal-actions button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-actions button:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 25px 20px;
+        margin: 20px;
+        max-width: none;
+        width: calc(100% - 40px);
+    }
+
+    .modal-content h3 {
+        font-size: 1.2rem;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .modal-actions button {
+        width: 100%;
+    }
+}
+
+/* 动画定义 */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* 删除相关的模态框特殊样式 */
+#deleteModal .modal-content::before,
+#clearHistoryModal .modal-content::before,
+#deleteHistoryModal .modal-content::before {
+    background: linear-gradient(90deg, var(--danger-color), #ff6b6b);
+}
+
+#deleteModal .modal-content h3,
+#clearHistoryModal .modal-content h3,
+#deleteHistoryModal .modal-content h3 {
+    color: var(--danger-color);
+}
+
+#deleteModal .btn.primary,
+#clearHistoryModal .btn.primary,
+#deleteHistoryModal .btn.primary {
+    background: var(--danger-color);
+    color: white;
+}
+
+#deleteModal .btn.primary:hover,
+#clearHistoryModal .btn.primary:hover,
+#deleteHistoryModal .btn.primary:hover {
+    background: var(--danger-hover);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
 }
 
 .modal-content h3 {
@@ -50,91 +172,4 @@
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* 删除确认模态框 */
-.delete-confirm-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-    backdrop-filter: blur(3px);
-}
-
-.delete-confirm-modal.hidden {
-    display: none;
-}
-
-.delete-confirm-content {
-    background: var(--panel-bg);
-    padding: 25px;
-    border-radius: var(--radius-md);
-    width: 350px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.3s;
-}
-
-.delete-confirm-content h3 {
-    margin: 0;
-    color: var(--danger-color);
-    font-size: 1.2rem;
-}
-
-.delete-confirm-content p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.delete-confirm-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.delete-confirm-actions button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 14px;
-    transition: all var(--transition-fast);
-}
-
-.delete-confirm-actions .btn-cancel {
-    background-color: #e2e8f0;
-    color: var(--text-dark);
-}
-
-.delete-confirm-actions .btn-cancel:hover {
-    background-color: #cbd5e1;
-}
-
-.delete-confirm-actions .btn-cancel:active {
-    transform: scale(0.97);
-}
-
-.delete-confirm-actions .btn-delete {
-    background-color: var(--danger-color);
-    color: white;
-}
-
-.delete-confirm-actions .btn-delete:hover {
-    background-color: var(--danger-hover);
-}
-
-.delete-confirm-actions .btn-delete:active {
-    background-color: var(--danger-active);
-    transform: scale(0.97);
 }

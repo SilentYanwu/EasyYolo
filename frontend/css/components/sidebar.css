@@ -8,14 +8,6 @@
     overflow-y: auto;
 }
 
-.logo-area h2 {
-    margin-top: 0;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 20px;
-    font-size: 1.5rem;
-    display: none;
-}
-
 .model-section {
     flex: 1;
     overflow-y: auto;
@@ -90,6 +82,7 @@
     margin-top: auto;
     padding-top: 20px;
 }
+
 
 .nav-btn {
     display: block;

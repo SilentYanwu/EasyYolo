@@ -28,9 +28,16 @@ export const dom = {
     // 弹窗相关
     uploadModal: document.getElementById('uploadModal'),
     renameModal: document.getElementById('renameModal'),
+    deleteModal: document.getElementById('deleteModal'),
+    clearHistoryModal: document.getElementById('clearHistoryModal'),
+    deleteHistoryModal: document.getElementById('deleteHistoryModal'),
     renameInput: document.getElementById('renameInput'),
     oldNameHidden: document.getElementById('oldNameHidden'),
     categoryHidden: document.getElementById('categoryHidden'),
+    deleteModelName: document.getElementById('deleteModelName'),
+    deleteModelNameHidden: document.getElementById('deleteModelNameHidden'),
+    deleteCategoryHidden: document.getElementById('deleteCategoryHidden'),
+    deleteHistoryIdHidden: document.getElementById('deleteHistoryIdHidden'),
     
     // 进度与反馈
     batchProgress: document.getElementById('batchProgress'),

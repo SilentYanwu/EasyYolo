@@ -4,4 +4,4 @@
 .vscode
 database
 **/__pycache__/
-TestData
+.TestData

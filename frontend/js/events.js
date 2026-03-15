@@ -82,14 +82,28 @@ export function bindEvents() {
     window.switchPage = (pageId, btn) => ui.switchPage(pageId, btn);
 
     // 9. 弹窗控制映射到 window 给 HTML 调用
-    window.openUploadModal = () => dom.uploadModal.classList.remove('hidden');
+    window.openUploadModal = () => {
+        dom.uploadModal.classList.remove('hidden');
+        setTimeout(() => {
+            const fileInput = dom.uploadModal.querySelector('input[type="file"]');
+            if (fileInput) fileInput.focus();
+        }, 100);
+    };
     window.closeUploadModal = () => dom.uploadModal.classList.add('hidden');
     window.closeRenameModal = () => dom.renameModal.classList.add('hidden');
+    window.closeDeleteModal = () => dom.deleteModal.classList.add('hidden');
+    window.closeClearHistoryModal = () => dom.clearHistoryModal.classList.add('hidden');
+    window.closeDeleteHistoryModal = () => dom.deleteHistoryModal.classList.add('hidden');
     window.uploadModel = handleModelUpload; // 修正命名以匹配 HTML
     window.confirmRename = handleModelRename;
+    window.confirmDelete = handleModelDelete;
+    window.confirmClearHistory = confirmClearHistoryAction;
+    window.confirmDeleteHistory = handleDeleteHistoryItem;
     window.clearHistory = handleClearHistory;
-}
 
+    // 10. 模态框优化：ESC键关闭和点击背景关闭
+    setupModalOptimizations();
+}
 /**
  * 业务处理器：单张预测
  */
@@ -238,6 +252,28 @@ async function handleModelRename() {
     } catch (e) { alert('重命名失败'); }
 }
 
+function openDeleteModal(modelName, category) {
+    dom.deleteModelName.textContent = modelName;
+    dom.deleteModelNameHidden.value = modelName;
+    dom.deleteCategoryHidden.value = category;
+    dom.deleteModal.classList.remove('hidden');
+    // 设置焦点到取消按钮
+    setTimeout(() => {
+        const cancelBtn = dom.deleteModal.querySelector('.modal-actions button:first-child');
+        if (cancelBtn) cancelBtn.focus();
+    }, 100);
+}
+
+async function handleModelDelete() {
+    const modelName = dom.deleteModelNameHidden.value;
+    const category = dom.deleteCategoryHidden.value;
+    try {
+        await api.deleteModel(modelName, category);
+        window.closeDeleteModal();
+        refreshApp();
+    } catch (e) { alert('删除失败'); }
+}
+
 /**
  * 业务：历史记录查看
  */
@@ -263,9 +299,28 @@ function handleViewHistory(res, ori) {
 }
 
 async function handleClearHistory() {
-    if (!confirm("清空历史记录？")) return;
-    await api.clearHistory(state.currentModelName);
-    refreshHistory();
+    dom.clearHistoryModal.classList.remove('hidden');
+    setTimeout(() => {
+        const cancelBtn = dom.clearHistoryModal.querySelector('.modal-actions button:first-child');
+        if (cancelBtn) cancelBtn.focus();
+    }, 100);
+}
+
+async function confirmClearHistoryAction() {
+    try {
+        await api.clearHistory(state.currentModelName);
+        window.closeClearHistoryModal();
+        refreshHistory();
+    } catch (e) { alert('清空失败'); }
+}
+
+async function handleDeleteHistoryItem() {
+    const recordId = dom.deleteHistoryIdHidden.value;
+    try {
+        await api.deleteHistoryItem(recordId);
+        window.closeDeleteHistoryModal();
+        refreshHistory();
+    } catch (e) { alert('删除失败'); }
 }
 
 /**
@@ -288,12 +343,11 @@ export async function refreshApp() {
             dom.categoryHidden.value = category;
             dom.renameInput.value = name.replace('.pt', '');
             dom.renameModal.classList.remove('hidden');
+            setTimeout(() => {
+                if (dom.renameInput) dom.renameInput.focus();
+            }, 100);
         }, 
-        (name, category) => { 
-            if(confirm(`确定从磁盘删除模型 ${name} 吗？`)) {
-                api.deleteModel(name, category).then(refreshApp);
-            }
-        }
+        (name, category) => openDeleteModal(name, category)
     );
     
     refreshHistory();
@@ -302,6 +356,67 @@ export async function refreshApp() {
 async function refreshHistory() {
     const history = await api.getHistory(state.currentModelName);
     ui.renderHistory(history, handleViewHistory, (id) => {
-        if(confirm("确定删除?")) api.deleteHistoryItem(id).then(refreshHistory);
+        dom.deleteHistoryIdHidden.value = id;
+        dom.deleteHistoryModal.classList.remove('hidden');
+        setTimeout(() => {
+            const cancelBtn = dom.deleteHistoryModal.querySelector('.modal-actions button:first-child');
+            if (cancelBtn) cancelBtn.focus();
+        }, 100);
+    });
+}
+
+/**
+ * 模态框优化：ESC键关闭和点击背景关闭
+ */
+function setupModalOptimizations() {
+    // ESC键关闭模态框
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // 找到当前打开的模态框并关闭
+            const openModals = document.querySelectorAll('.modal:not(.hidden)');
+            openModals.forEach(modal => modal.classList.add('hidden'));
+        }
+    });
+
+    // 点击背景关闭模态框
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            e.target.classList.add('hidden');
+        }
+    });
+
+    // 防止模态框内容点击冒泡
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.modal-content')) {
+            e.stopPropagation();
+        }
+    });
+
+    // Tab键循环导航（在模态框内）
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+            const openModal = document.querySelector('.modal:not(.hidden)');
+            if (openModal) {
+                const focusableElements = openModal.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (e.shiftKey) {
+                    // Shift + Tab
+                    if (document.activeElement === firstElement) {
+                        lastElement.focus();
+                        e.preventDefault();
+                    }
+                } else {
+                    // Tab
+                    if (document.activeElement === lastElement) {
+                        firstElement.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+        }
     });
 }

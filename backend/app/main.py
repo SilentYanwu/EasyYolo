@@ -1,8 +1,6 @@
 import os
 import shutil
-import uuid
 from typing import List
-from datetime import datetime 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -119,8 +117,6 @@ def rename_model(
             current_model_name = new_name
             
         # 数据库里的历史记录也要同步更新 model_name 字段！
-        from services.db_service import db_service
-        # 调用更新方法
         db_service.update_model_name(old_name, new_name)
             
         return {"status": "success", "new_name": new_name}
@@ -242,18 +238,6 @@ async def predict_video(file: UploadFile = File(...)):
             "Connection": "keep-alive",
         }
     )
-
-# 切换模型的接口
-@app.post("/switch_model")
-async def switch_model(model_name: str, category: str):
-    """
-    前端点击侧边栏模型时调用此接口
-    """
-    try:
-        yolo_service.load_model(model_name, category)
-        return {"message": f"Successfully switched to {model_name} ({category})"}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
