@@ -109,16 +109,23 @@
     display: none;
 }
 
-/* 只有当 src 且 src 不为空时才显示图片 */
-.img-wrapper img[src]:not([src=""]) {
+/* 只有当 src 且 src 不为空时才显示图片/视频 */
+.img-wrapper img[src]:not([src=""]),
+.img-wrapper video[src]:not([src=""]) {
     display: block;
 }
 
-/* 图片显示时隐藏占位符 */
+/* 内容显示时隐藏占位符图标和文字 */
 .img-wrapper:has(img[src]:not([src=""]))::before,
 .img-wrapper:has(img[src]:not([src=""]))::after,
-.img-wrapper:has(img[src]:not([src=""])) {
-    border-style: solid; /* 有图时实线边缘 */
+.img-wrapper:has(video[src]:not([src=""]))::before,
+.img-wrapper:has(video[src]:not([src=""]))::after {
+    display: none;
+}
+
+.img-wrapper:has(img[src]:not([src=""])),
+.img-wrapper:has(video[src]:not([src=""])) {
+    border-style: solid;
 }
 
 .global-header {

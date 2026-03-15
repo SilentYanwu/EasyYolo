@@ -13,6 +13,11 @@
     --danger-color: #ef4444;
     --danger-hover: #dc2626;
     --danger-active: #b91c1c;
+
+    /* 棕色 (用于播放/暂停) */
+    --brown-color: #78350f;
+    --brown-hover: #451a03;
+    --brown-active: #331201;
     
     /* 背景色 */
     --sidebar-bg: #1e293b;

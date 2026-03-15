@@ -75,8 +75,20 @@
 
 /* 侧边栏开闭动画（类似ChatGPT边栏侧滑特效） */
 .sidebar {
-    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1), padding 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
-    will-change: width, padding, opacity;
+    transition: 
+        width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.3s ease,
+        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: width, padding, opacity, transform;
+    position: relative;
+    z-index: 10;
+}
+
+/* 侧边栏内部内容淡出，防止尺寸压缩时的字符堆叠 */
+.sidebar > * {
+    transition: opacity 0.2s ease;
+    opacity: 1;
 }
 
 .sidebar.collapsed {
@@ -85,7 +97,12 @@
     padding-right: 0 !important;
     opacity: 0 !important;
     overflow: hidden !important;
-    transform: translateX(-20px);
+    transform: translateX(-10px);
+    pointer-events: none;
+}
+
+.sidebar.collapsed > * {
+    opacity: 0;
 }
 
 /* 隐藏打开和关闭按钮的状态 */

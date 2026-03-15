@@ -146,3 +146,61 @@ async def batch_predict_generator(
 
     # SSE 事件：全部完成
     yield f"data: {json.dumps({'done': True, 'total': total})}\n\n"
+
+
+async def video_predict_generator(file: UploadFile, model_name: str, conf: float = 0.25):
+    """
+    视频识别生成器 (SSE)
+    """
+    print(f"Received video upload: {file.filename}, type: {file.content_type}")
+    # 1. 保存上传的原始视频
+    file_path, unique_filename = await save_upload_file(file)
+    print(f"Video saved to: {file_path}")
+    
+    result_filename = f"result_{unique_filename}"
+    # 强制后缀为 .mp4 以便浏览器播放 (CV2 VideoWriter 指定了 mp4v)
+    if not result_filename.endswith(".mp4"):
+        result_filename = os.path.splitext(result_filename)[0] + ".mp4"
+    
+    result_path = os.path.join(settings.RESULT_DIR, result_filename)
+    
+    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
+    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
+
+    try:
+        # 2. 在线程中运行视频处理生成器
+        print("Starting video processing...")
+        
+        for current, total in yolo_service.predict_video_stream(file_path, result_path, conf):
+            percent = int((current / total) * 100) if total > 0 else 0
+            # ...
+            event_data = {
+                "current_frame": current,
+                "total_frames": total,
+                "percent": percent,
+                "status": "processing"
+            }
+            yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+            # 稍微停顿一下，让事件能发出去（可选）
+            await asyncio.sleep(0.01)
+
+        # 3. 处理完成后存入数据库
+        db_service.add_record(
+            model_name,
+            original_url,
+            result_url
+        )
+
+        # 4. 发送已完成事件
+        final_data = {
+            "done": True,
+            "original_url": original_url,
+            "result_url": result_url,
+            "status": "completed"
+        }
+        yield f"data: {json.dumps(final_data, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        yield f"data: {json.dumps({'error': str(e), 'status': 'failed'})}\n\n"

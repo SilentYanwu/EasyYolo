@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Easy Yolo</title>
     <link rel="stylesheet" href="css/style.css">
+    <script>
+        if (window.location.protocol === 'file:') {
+            alert('警告：请勿直接双击打开 HTML 文件！\n浏览器会由于安全限制拦截识别请求。\n\n请使用 VS Code 的 "Live Server" 插件或运行 python -m http.server 打开此页面。');
+        }
+    </script>
 </head>
 
 <body>
@@ -13,10 +18,10 @@
     <header class="global-header">
         <div class="logo">EASY YOLO</div>
         <nav class="top-nav">
-            <!-- 传参 this 是为了在 JS 里方便给他加高亮样式 -->
-            <button class="top-nav-btn active" onclick="switchPage('inference', this)">YOLO识别</button>
-            <button class="top-nav-btn" onclick="switchPage('training', this)">YOLO训练</button>
-            <button class="top-nav-btn" onclick="switchPage('details', this)">YOLO模型详情</button>
+            <!-- 加上 data-page 以匹配 ES6 模块的事件绑定 -->
+            <button class="top-nav-btn active" data-page="inference" onclick="switchPage('inference', this)">YOLO识别</button>
+            <button class="top-nav-btn" data-page="training" onclick="switchPage('training', this)">YOLO训练</button>
+            <button class="top-nav-btn" data-page="details" onclick="switchPage('details', this)">YOLO模型详情</button>
         </nav>
     </header>
 
@@ -60,7 +65,9 @@
             <div class="workspace">
                 <div class="control-panel">
                     <input type="file" id="imageInput" accept="image/*" multiple hidden>
+                    <input type="file" id="videoInput" accept="video/*" hidden>
                     <button class="btn primary" onclick="document.getElementById('imageInput').click()">上传图片</button>
+                    <button class="btn info" onclick="document.getElementById('videoInput').click()">上传视频</button>
                     <button class="btn success" id="predictBtn" disabled>开始识别</button>
                     <span id="statusText">等待上传...</span>
                 </div>
@@ -84,16 +91,25 @@
                         <div class="box-header">
                             <h4>原始图片</h4>
                         </div>
-                        <div class="img-wrapper" data-placeholder="等待图片上传..."><img id="originalImg" src=""></div>
+                        <div class="img-wrapper" data-placeholder="等待图片/视频上传...">
+                            <img id="originalImg" src="" style="display: none;">
+                            <video id="originalVideo" src="" controls muted playsinline style="display: none; width: 100%; height: 100%; object-fit: contain;"></video>
+                        </div>
                     </div>
 
                     <!-- 右侧：识别结果 -->
                     <div class="image-box">
                         <div class="box-header">
                             <h4>识别结果</h4>
-                            <a id="downloadLink" href="#" class="btn download-btn" style="display:none;">下载结果</a>
+                            <div class="actions">
+                                <button id="playPauseBtn" class="btn-action btn-brown" style="display: none;">播放/暂停</button>
+                                <a id="downloadLink" href="#" class="btn-action btn-purple" style="display:none;">下载结果</a>
+                            </div>
                         </div>
-                        <div class="img-wrapper" data-placeholder="等待识别推理..."><img id="resultImg" src=""></div>
+                        <div class="img-wrapper" data-placeholder="等待识别推理...">
+                            <img id="resultImg" src="" style="display: none;">
+                            <video id="resultVideo" src="" controls muted playsinline style="display: none; width: 100%; height: 100%; object-fit: contain;"></video>
+                        </div>
                     </div>
                 </div>
 
@@ -219,7 +235,7 @@
         </div>
     </div>
 
-    <script src="js/script.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 
 </html>

@@ -14,7 +14,7 @@ from fastapi import Form
 from core.config import settings
 from services.yolo_service import yolo_service
 from services.db_service import db_service
-from services.inference_service import batch_predict_generator, handle_single_predict
+from services.inference_service import batch_predict_generator, handle_single_predict, video_predict_generator
 
 
 current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
@@ -218,6 +218,24 @@ async def predict_batch(files: List[UploadFile] = File(...)):
 
     return StreamingResponse(
         batch_predict_generator(valid_files, current_model_name),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+# 视频推理接口
+@app.post("/predict_video")
+async def predict_video(file: UploadFile = File(...)):
+    """
+    视频推理接口（SSE 实时推送进度）
+    """
+    if not file.content_type or not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="请上传有效的视频文件")
+
+    return StreamingResponse(
+        video_predict_generator(file, current_model_name),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
