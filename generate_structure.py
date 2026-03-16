@@ -25,7 +25,9 @@ IGNORE_FOLDERS = {  # 要忽略的文件夹
     '*.egg-info',
     '.pytest_cache',
     '.mypy_cache',
-    '.tox'
+    '.tox',
+    '.Backup',
+    '.TestData'
 }
 
 IGNORE_FILES = {  # 要忽略的文件
@@ -38,6 +40,7 @@ IGNORE_FILES = {  # 要忽略的文件
     '*.log',
     '*.tmp',
     '*.temp'
+
 }
 
 def should_ignore(name, is_dir=False):

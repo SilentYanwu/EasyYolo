@@ -1,23 +1,10 @@
 ============================================================
 项目结构: EasyYolo
-生成时间: 2026-03-16 03:26:28
-统计信息: 24 个文件夹, 45 个文件
+生成时间: 2026-03-17 03:09:47
+统计信息: 19 个文件夹, 37 个文件
 ============================================================
 
 EasyYolo/
-├── .Backup/
-│   ├── 1.js (9.2 KB)
-│   ├── db_service.py (5.3 KB)
-│   └── style.css (7.0 KB)
-├── .TestData/
-│   ├── 图片/
-│   │   ├── p1.png (2.0 MB)
-│   │   ├── p2.png (1.7 MB)
-│   │   └── p3.png (1.9 MB)
-│   ├── 模型/
-│   │   └── yolov8n.pt (6.2 MB)
-│   └── 视频/
-│       └── QQ20260315-230124.mp4 (2.8 MB)
 ├── backend/
 │   ├── app/
 │   │   ├── core/
@@ -31,7 +18,7 @@ EasyYolo/
 │   │   ├── __init__.py (0 B)
 │   │   ├── main.py (8.0 KB)
 │   │   └── openh264-1.8.0-win64.dll (805.8 KB)
-│   ├── static/
+│   ├── inferecord/
 │   │   ├── results/
 │   │   └── uploads/
 │   └── __init__.py (2.0 B)
@@ -47,7 +34,7 @@ EasyYolo/
 │   │   │   ├── batch.css (2.5 KB)
 │   │   │   ├── buttons.css (6.7 KB)
 │   │   │   ├── history.css (2.9 KB)
-│   │   │   ├── modals.css (3.9 KB)
+│   │   │   ├── modals.css (4.2 KB)
 │   │   │   └── sidebar.css (2.0 KB)
 │   │   ├── utils/
 │   │   │   └── animations.css (3.1 KB)
@@ -55,12 +42,12 @@ EasyYolo/
 │   ├── js/
 │   │   ├── api.js (3.0 KB)
 │   │   ├── config.js (106.0 B)
-│   │   ├── dom.js (2.4 KB)
-│   │   ├── events.js (14.6 KB)
+│   │   ├── dom.js (2.6 KB)
+│   │   ├── events.js (15.1 KB)
 │   │   ├── main.js (508.0 B)
 │   │   ├── state.js (430.0 B)
 │   │   └── ui.js (7.2 KB)
-│   └── index.html (14.6 KB)
+│   └── index.html (15.0 KB)
 ├── models/
 │   ├── raw/
 │   │   ├── yolo11m.pt (38.8 MB)
@@ -68,15 +55,15 @@ EasyYolo/
 │   │   └── yolo11s.pt (18.4 MB)
 │   ├── trained/
 │   └── yolo/
-├── README.md (351.0 B)
-├── clean_history.py (1.5 KB)
+├── README.md (366.0 B)
+├── clean_history.py (1.4 KB)
 ├── generate_structure.py (6.1 KB)
 ├── run_frontend.py (1.8 KB)
-├── 日志.md (2.8 KB)
-└── 项目结构.txt (3.1 KB)
+├── 日志.md (3.0 KB)
+└── 项目结构.txt (2.7 KB)
 
 ============================================================
 忽略的文件夹/文件:
-文件夹: *.egg-info, .env, .git, .idea, .mypy_cache, .pytest_cache, .tox, .venv, .vscode, __pycache__, build, dist, env, node_modules, venv
+文件夹: *.egg-info, .Backup, .TestData, .env, .git, .idea, .mypy_cache, .pytest_cache, .tox, .venv, .vscode, __pycache__, build, dist, env, node_modules, venv
 文件: *.log, *.pyc, *.pyd, *.pyo, *.temp, *.tmp, .DS_Store, .env.example, .gitignore
 ============================================================

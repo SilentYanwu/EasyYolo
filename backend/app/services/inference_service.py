@@ -41,8 +41,8 @@ def predict_single(file_path: str, unique_filename: str, conf: float = 0.25) -> 
     result_filename = f"result_{unique_filename}"
     result_path = os.path.join(settings.RESULT_DIR, result_filename)
 
-    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
-    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
+    original_url = f"http://127.0.0.1:8000/inferecord/uploads/{unique_filename}"
+    result_url = f"http://127.0.0.1:8000/inferecord/results/{result_filename}"
 
     detections_json = yolo_service.predict_image(
         source_path=file_path,
@@ -164,8 +164,8 @@ async def video_predict_generator(file: UploadFile, model_name: str, conf: float
     
     result_path = os.path.join(settings.RESULT_DIR, result_filename)
     
-    original_url = f"http://127.0.0.1:8000/static/uploads/{unique_filename}"
-    result_url = f"http://127.0.0.1:8000/static/results/{result_filename}"
+    original_url = f"http://127.0.0.1:8000/inferecord/uploads/{unique_filename}"
+    result_url = f"http://127.0.0.1:8000/inferecord/results/{result_filename}"
 
     try:
         # 2. 在线程中运行视频处理生成器

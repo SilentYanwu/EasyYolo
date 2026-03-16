@@ -14,11 +14,11 @@ class Settings:
     }
 
     # 3. 定义静态资源路径 (用于图片上传和结果)
-    # 这里保持在 backend/static
+    # 这里保持在 backend/inferecord
     BACKEND_DIR = os.path.join(BASE_DIR, "backend")
-    STATIC_DIR = os.path.join(BACKEND_DIR, "static")
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
-    RESULT_DIR = os.path.join(STATIC_DIR, "results")
+    INFER_RECORD_DIR = os.path.join(BACKEND_DIR, "inferecord")
+    UPLOAD_DIR = os.path.join(INFER_RECORD_DIR, "uploads")
+    RESULT_DIR = os.path.join(INFER_RECORD_DIR, "results")
 
     # 4. 默认模型
     DEFAULT_MODEL_NAME = "yolo11n.pt"

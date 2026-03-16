@@ -26,8 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载静态目录
-app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+# 挂载静态目录      
+app.mount("/inferecord", StaticFiles(directory=settings.INFER_RECORD_DIR), name="inferecord")
 
 @app.get("/models")
 def get_models():

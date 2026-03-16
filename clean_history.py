@@ -2,16 +2,13 @@ import os
 import shutil
 
 def clear_target_folders():
-    """
-    清空当前目录下 backend/static/results 和 backend/static/uploads 里的所有内容
-    """
     # 获取当前脚本所在目录
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 要清空的文件夹路径
     folders_to_clear = [
-        os.path.join(base_dir, "backend", "static", "results"),
-        os.path.join(base_dir, "backend", "static", "uploads"),
+        os.path.join(base_dir, "backend", "inferecord", "results"),
+        os.path.join(base_dir, "backend", "inferecord", "uploads"),
         os.path.join(base_dir, "database")
     ]
 
