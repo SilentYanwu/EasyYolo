@@ -17,7 +17,8 @@ export function bindEvents() {
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
         if (files.length > 99) {
-            alert('单次最多支持 99 张图片');
+            dom.warningMessage.innerText = `单次最多支持 99 张图片，您选择了 ${files.length} 张`;
+            dom.warningModal.classList.remove('hidden');
             return;
         }
         selectedFiles = files;
@@ -78,10 +79,7 @@ export function bindEvents() {
         ui.applyGlobalSidebarState();
     };
 
-    // 8. 页面切换
-    window.switchPage = (pageId, btn) => ui.switchPage(pageId, btn);
-
-    // 9. 弹窗控制映射到 window 给 HTML 调用
+    // 8. 弹窗控制映射到 window 给 HTML 调用
     window.openUploadModal = () => {
         dom.uploadModal.classList.remove('hidden');
         setTimeout(() => {
@@ -94,6 +92,7 @@ export function bindEvents() {
     window.closeDeleteModal = () => dom.deleteModal.classList.add('hidden');
     window.closeClearHistoryModal = () => dom.clearHistoryModal.classList.add('hidden');
     window.closeDeleteHistoryModal = () => dom.deleteHistoryModal.classList.add('hidden');
+    window.closeWarningModal = () => dom.warningModal.classList.add('hidden');
     window.uploadModel = handleModelUpload; // 修正命名以匹配 HTML
     window.confirmRename = handleModelRename;
     window.confirmDelete = handleModelDelete;
@@ -101,7 +100,7 @@ export function bindEvents() {
     window.confirmDeleteHistory = handleDeleteHistoryItem;
     window.clearHistory = handleClearHistory;
 
-    // 10. 模态框优化：ESC键关闭和点击背景关闭
+    // 9. 模态框优化：ESC键关闭和点击背景关闭
     setupModalOptimizations();
 }
 /**

@@ -39,7 +39,7 @@ def run_server():
             port += 1
 
     if not httpd:
-        print("❌ 错误: 无法启动服务器，多个端口均被占用。请手动关闭占用 5500 的进程（如 Live Server）。")
+        print("❌ 错误: 无法启动服务器，多个端口均被占用。请手动关闭占用 5501 的进程（如 Live Server）。")
         return
 
     print(f"🚀 EasyYolo 前端服务器启动成功！")

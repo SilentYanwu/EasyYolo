@@ -5,8 +5,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
-from fastapi import Body
-from fastapi import Form
+from fastapi import Body, Form
 
 # 引入配置和业务服务
 from core.config import settings

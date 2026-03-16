@@ -150,7 +150,7 @@
     background: var(--danger-hover);
     box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
-}
+
 
 .modal-content h3 {
     margin: 0 0 10px 0;
@@ -172,4 +172,23 @@
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 警告模态框特殊样式 */
+#warningModal .modal-content::before {
+    background: linear-gradient(90deg, #ff9800, #ffc107);
+}
+
+#warningModal .modal-content h3 {
+    color: #ff9800;
+}
+
+#warningModal .btn.primary {
+    background: #ff9800;
+    color: white;
+}
+
+#warningModal .btn.primary:hover {
+    background: #f57c00;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
 }

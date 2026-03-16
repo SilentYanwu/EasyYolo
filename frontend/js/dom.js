@@ -31,6 +31,8 @@ export const dom = {
     deleteModal: document.getElementById('deleteModal'),
     clearHistoryModal: document.getElementById('clearHistoryModal'),
     deleteHistoryModal: document.getElementById('deleteHistoryModal'),
+    warningModal: document.getElementById('warningModal'),
+    warningMessage: document.getElementById('warningMessage'),
     renameInput: document.getElementById('renameInput'),
     oldNameHidden: document.getElementById('oldNameHidden'),
     categoryHidden: document.getElementById('categoryHidden'),
