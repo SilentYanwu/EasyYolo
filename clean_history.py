@@ -9,7 +9,11 @@ def clear_target_folders():
     folders_to_clear = [
         os.path.join(base_dir, "backend", "inferecord", "results"),
         os.path.join(base_dir, "backend", "inferecord", "uploads"),
-        os.path.join(base_dir, "database")
+        os.path.join(base_dir, "database"),
+        os.path.join(base_dir, "datasets"),
+        os.path.join(base_dir, "backend", "trainchart"),
+        os.path.join(base_dir, "runs")
+
     ]
 
     for folder_path in folders_to_clear:

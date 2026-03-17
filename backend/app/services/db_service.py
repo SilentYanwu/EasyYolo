@@ -42,6 +42,18 @@ class InferenceHistory(Base):
     # 使用 datetime.now 并在数据库中存储
     created_at = Column(DateTime, default=datetime.now)
 
+class TrainingHistory(Base):
+    """模型训练历史记录"""
+    __tablename__ = "training_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    model_name = Column(String, unique=True, nullable=False, index=True) # 训练产生的文件名 (也是key)
+    base_model = Column(String)                                          # 基础模型名
+    dataset = Column(String)                                             # 数据集名称
+    parameters = Column(String)                                          # 训练参数 (JSON 字符串)
+    description = Column(String, default="")                              # 模型介绍
+    created_at = Column(DateTime, default=datetime.now)                  # 训练完成时间
+
 # 自动创建表 (如果不存在)
 Base.metadata.create_all(bind=engine)
 
@@ -179,6 +191,82 @@ class DBService:
         except Exception as e:
             db.rollback()
             print(f"Error clearing history: {e}")
+        finally:
+            db.close()
+
+    # --------------- 训练记录相关 -------------------
+
+    def add_training_record(self, model_name: str, base_model: str, dataset: str, parameters: str, description: str = ""):
+        """新增/更新一次训练历史入库"""
+        db = self._get_db()
+        try:
+            # 检查是否已存在同名记录 (训练同名模型覆盖时更新)
+            existing = db.query(TrainingHistory).filter(TrainingHistory.model_name == model_name).first()
+            if existing:
+                existing.base_model = base_model
+                existing.dataset = dataset
+                existing.parameters = parameters
+                existing.description = description
+                existing.created_at = datetime.now()
+            else:
+                new_record = TrainingHistory(
+                    model_name=model_name,
+                    base_model=base_model,
+                    dataset=dataset,
+                    parameters=parameters,
+                    description=description
+                )
+                db.add(new_record)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error adding training record: {e}")
+        finally:
+            db.close()
+
+    def get_training_record(self, model_name: str):
+        """获取单个模型的训练记录详情"""
+        db = self._get_db()
+        try:
+            record = db.query(TrainingHistory).filter(TrainingHistory.model_name == model_name).first()
+            if record:
+                return {
+                    "model_name": record.model_name,
+                    "base_model": record.base_model,
+                    "dataset": record.dataset,
+                    "parameters": record.parameters,
+                    "description": record.description or "",
+                    "time": record.created_at.strftime("%Y-%m-%d %H:%M:%S") if record.created_at else ""
+                }
+            return None
+        finally:
+            db.close()
+
+    def delete_training_record(self, model_name: str):
+        """级联删除一个模型的训练记录细节"""
+        db = self._get_db()
+        try:
+            record = db.query(TrainingHistory).filter(TrainingHistory.model_name == model_name).first()
+            if record:
+                db.delete(record)
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error clearing training history: {e}")
+        finally:
+            db.close()
+
+    def update_training_record_name(self, old_name: str, new_name: str):
+        """级联重命名一个模型的训练记录细节"""
+        db = self._get_db()
+        try:
+            db.query(TrainingHistory).\
+                filter(TrainingHistory.model_name == old_name).\
+                update({"model_name": new_name})
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error updating training record name: {e}")
         finally:
             db.close()
 

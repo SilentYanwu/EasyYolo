@@ -20,7 +20,12 @@ class Settings:
     UPLOAD_DIR = os.path.join(INFER_RECORD_DIR, "uploads")
     RESULT_DIR = os.path.join(INFER_RECORD_DIR, "results")
 
-    # 4. 默认模型
+    # 4. 训练相关目录
+    DATASETS_DIR = os.path.join(BASE_DIR, "datasets")        # 数据集目录
+    TRAINCHART_DIR = os.path.join(BACKEND_DIR, "trainchart") # 训练图表成果目录
+    RUNS_DIR = os.path.join(BASE_DIR, "runs")                # Ultralytics训练的runs目录
+
+    # 5. 默认模型
     DEFAULT_MODEL_NAME = "yolo11n.pt"
 
 settings = Settings()
@@ -30,3 +35,5 @@ for path in settings.MODEL_DIRS.values():
     os.makedirs(path, exist_ok=True)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(settings.RESULT_DIR, exist_ok=True)
+os.makedirs(settings.DATASETS_DIR, exist_ok=True)
+os.makedirs(settings.TRAINCHART_DIR, exist_ok=True)

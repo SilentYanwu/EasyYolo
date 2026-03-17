@@ -1,13 +1,31 @@
 import os
 import cv2
+import shutil
+import torch
+import gc
 from ultralytics import YOLO
 from core.config import settings
 
 class YoloService:
     def __init__(self):
         self.model = None
+        self._current_model_name = None
+        self._current_category = None
         # 初始化时加载默认模型 (从 raw 目录)
         self.load_model(settings.DEFAULT_MODEL_NAME, category="raw")
+
+    def unload_model(self):
+        """
+        显式释放当前推理模型占用的 GPU 显存。
+        在训练前调用，防止 CUDA OOM。
+        """
+        if self.model is not None:
+            del self.model
+            self.model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print("GPU memory released for training.")
 
     def load_model(self, model_name: str, category: str = "raw"):
         """
@@ -15,6 +33,10 @@ class YoloService:
         :param model_name: 模型文件名，如 'yolo11n.pt' 或 'steel_v1.pt'
         :param category: 模型类别 'raw', 'yolo', 'trained'
         """
+        # 记录当前模型信息，训练后可自动重载
+        self._current_model_name = model_name
+        self._current_category = category
+
         # 1. 确定文件夹路径
         target_dir = settings.MODEL_DIRS.get(category)
         if not target_dir:
@@ -28,8 +50,14 @@ class YoloService:
                 # 让 ultralytics 自动下载，然后我们移动它
                 print(f"Model not found at {model_path}, downloading...")
                 temp_model = YOLO(model_name) 
-                # 移动下载的文件到 raw 目录 (ultralytics通常下载到运行根目录)
                 self.model = temp_model
+
+                # 显式将下载的文件从当前运行目录移到对应的 raw 目录
+                downloaded_file = os.path.join(os.getcwd(), model_name)
+                if os.path.exists(downloaded_file):
+                    os.makedirs(target_dir, exist_ok=True)
+                    shutil.move(downloaded_file, model_path)
+                    print(f"Successfully moved auto-downloaded model to {model_path}")
             else:
                 raise FileNotFoundError(f"Model file not found: {model_path}")
         else:

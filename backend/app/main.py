@@ -12,6 +12,8 @@ from core.config import settings
 from services.yolo_service import yolo_service
 from services.db_service import db_service
 from services.inference_service import batch_predict_generator, handle_single_predict, video_predict_generator
+from services.training_service import training_service
+import json
 
 
 current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
@@ -28,6 +30,7 @@ app.add_middleware(
 
 # 挂载静态目录      
 app.mount("/inferecord", StaticFiles(directory=settings.INFER_RECORD_DIR), name="inferecord")
+app.mount("/trainchart", StaticFiles(directory=settings.TRAINCHART_DIR), name="trainchart")
 
 @app.get("/models")
 def get_models():
@@ -117,6 +120,17 @@ def rename_model(
             
         # 数据库里的历史记录也要同步更新 model_name 字段！
         db_service.update_model_name(old_name, new_name)
+        # 训练记录里的 model_name 也要同步更新
+        db_service.update_training_record_name(old_name, new_name)
+
+        # 5. 如果是 trained 模型，还需要把后台的 trainchart 文件夹名称改掉
+        if category == "trained":
+            old_chart_name = old_name.replace(".pt", "")
+            new_chart_name = new_name.replace(".pt", "")
+            old_chart_dir = os.path.join(settings.TRAINCHART_DIR, old_chart_name)
+            new_chart_dir = os.path.join(settings.TRAINCHART_DIR, new_chart_name)
+            if os.path.exists(old_chart_dir):
+                os.rename(old_chart_dir, new_chart_dir)
             
         return {"status": "success", "new_name": new_name}
     except Exception as e:
@@ -144,8 +158,10 @@ def delete_model(model_name: str, category: str):
             # 重新加载默认模型
             yolo_service.load_model(current_model_name, "raw")
             
-        # 删除对应的数据库历史记录
+        # 删除对应的数据库推理历史记录
         db_service.clear_history(model_name)
+        # 移除相关的训练历史记录
+        db_service.delete_training_record(model_name)
             
         return {"status": "success"}
     except Exception as e:
@@ -237,6 +253,45 @@ async def predict_video(file: UploadFile = File(...)):
             "Connection": "keep-alive",
         }
     )
+
+# ----------------- 训练相关接口 -----------------
+
+@app.post("/upload_dataset")
+async def upload_dataset(file: UploadFile = File(...)):
+    """上传并解压数据集包，返回相对路径"""
+    try:
+        actual_path = training_service.extract_and_validate_dataset(file)
+        return {"status": "success", "dataset_path": actual_path}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/start_training")
+def start_training(
+    model_name: str = Form(...),
+    base_model: str = Form(...),
+    dataset_yaml_path: str = Form(...),
+    parameters: str = Form(...) # JSON string
+):
+    try:
+        params_dict = json.loads(parameters)
+        return training_service.start_training_task(model_name, base_model, dataset_yaml_path, params_dict)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/training_progress")
+def training_progress():
+    """获取前端轮询需要的实时训练状态"""
+    return training_service.get_progress()
+
+@app.get("/training_history/{model_name}")
+def get_training_history(model_name: str):
+    """获取某个模型的详细训练记录"""
+    record = db_service.get_training_record(model_name)
+    if record:
+        return {"status": "success", "data": record}
+    return {"status": "error", "message": "Record not found"}
 
 if __name__ == "__main__":
     import uvicorn

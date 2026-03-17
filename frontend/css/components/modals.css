@@ -183,12 +183,113 @@
     color: #ff9800;
 }
 
-#warningModal .btn.primary {
-    background: #ff9800;
-    color: white;
-}
-
 #warningModal .btn.primary:hover {
     background: #f57c00;
     box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+/* 训练参数大型模态框特殊样式 */
+.large-modal {
+    border: 1px solid #334155 !important;
+    background: #0f172a !important; /* 深蓝黑色底 */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.large-modal::before {
+    background: linear-gradient(90deg, #38bdf8, #818cf8) !important;
+    height: 5px !important;
+}
+
+.param-fieldset {
+    border-color: #334155;
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 20px 25px !important;
+    transition: border-color 0.2s;
+}
+
+.param-fieldset:hover {
+    border-color: #475569;
+}
+
+.param-fieldset legend {
+    font-size: 15px;
+    background: #0f172a;
+    padding: 0 15px !important;
+    border-radius: 4px;
+    border: 1px solid #334155;
+}
+
+.param-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.param-item label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.param-item .help-text {
+    font-size: 12px;
+    font-weight: normal;
+    color: #94a3b8;
+}
+
+.large-modal .form-input, .large-modal .form-select {
+    background: #0f172a !important;
+    border: 1px solid #475569 !important;
+    color: #f8fafc !important;
+    border-radius: 6px !important;
+    padding: 10px 12px !important;
+    font-family: monospace;
+    transition: all 0.2s;
+}
+
+.large-modal .form-input:focus, .large-modal .form-select:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+    outline: none;
+}
+
+/* 覆盖复选框默认样式使其更美观 */
+.large-modal input[type="checkbox"] {
+    appearance: none;
+    background-color: #0f172a;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.large-modal input[type="checkbox"]::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em #38bdf8;
+    background-color: #38bdf8;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.large-modal input[type="checkbox"]:checked {
+    background-color: rgba(56, 189, 248, 0.1);
+    border-color: #38bdf8;
+}
+
+.large-modal input[type="checkbox"]:checked::before {
+    transform: scale(1);
 }

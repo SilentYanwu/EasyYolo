@@ -23,6 +23,8 @@ export const dom = {
     // 列表容器
     rawList: document.getElementById('raw-model-list'),
     yoloList: document.getElementById('yolo-model-list'),
+    inferenceTrainedList: document.getElementById('inference-trained-model-list'),
+    trainedList: document.getElementById('trained-model-list'),
     historyGrid: document.getElementById('historyGrid'),
     
     // 弹窗相关
@@ -48,7 +50,36 @@ export const dom = {
     thumbnailPreview: document.getElementById('thumbnailPreview'),
     
     // 所有页面容器
-    allContainers: document.querySelectorAll('.app-container')
+    allContainers: document.querySelectorAll('.app-container'),
+
+    // --- 新增：YOLO训练页面相关 ---
+    trainBaseModel: document.getElementById('trainBaseModel'),
+    trainNewModelName: document.getElementById('trainNewModelName'),
+    trainDatasetInput: document.getElementById('trainDatasetInput'),
+    trainDatasetName: document.getElementById('trainDatasetName'),
+    uploadDatasetBtn: document.getElementById('uploadDatasetBtn'),
+    btnOpenTrainingParams: document.getElementById('btnOpenTrainingParams'),
+    startTrainBtn: document.getElementById('startTrainBtn'),
+    
+    // --- 新增：训练进度监控 ---
+    trainingDashboard: document.getElementById('trainingDashboard'),
+    trainStatusLabel: document.getElementById('trainStatusLabel'),
+    trainEtaLabel: document.getElementById('trainEtaLabel'),
+    trainProgressFill: document.getElementById('trainProgressFill'),
+    trainEpochLabel: document.getElementById('trainEpochLabel'),
+    trainMetricsGrid: document.getElementById('trainMetricsGrid'),
+
+    // --- 新增：训练参数模态框 ---
+    trainingParamsModal: document.getElementById('trainingParamsModal'),
+
+    // --- 新增：模型详情页面相关 ---
+    detailsPlaceholder: document.getElementById('detailsPlaceholder'),
+    detailsContent: document.getElementById('detailsContent'),
+    detailsModelName: document.getElementById('detailsModelName'),
+    detailsBaseModelLink: document.getElementById('detailsBaseModelLink'),
+    detailsParamsTable: document.getElementById('detailsParamsTable'),
+    detailsChartsGrid: document.getElementById('detailsChartsGrid'),
+    detailsModelDescription: document.getElementById('detailsModelDescription')
 };
 
 /**

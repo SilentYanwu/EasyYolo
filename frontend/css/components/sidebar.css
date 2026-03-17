@@ -5,7 +5,23 @@
     display: flex;
     flex-direction: column;
     padding: 20px;
+    padding-right: 8px;
     overflow-y: auto;
+}
+
+/* 侧边栏滚动条：超细、贴边、低调 */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.35);
 }
 
 .model-section {

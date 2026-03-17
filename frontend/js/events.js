@@ -100,8 +100,43 @@ export function bindEvents() {
     window.confirmDeleteHistory = handleDeleteHistoryItem;
     window.clearHistory = handleClearHistory;
 
+    // --- 新增：YOLO训练相关的弹窗与事件映射 ---
+    window.openTrainingParamsModal = () => {
+        dom.trainingParamsModal.classList.remove('hidden');
+    };
+    window.closeTrainingParamsModal = () => {
+        dom.trainingParamsModal.classList.add('hidden');
+    };
+    window.saveTrainingParams = () => {
+        // 其实只需要隐藏即可，因为实际是用的时候实时取DOM值
+        window.closeTrainingParamsModal();
+        alert('训练参数已记录');
+    };
+    window.startTraining = handleStartTraining;
+
+    dom.uploadDatasetBtn.onclick = () => dom.trainDatasetInput.click();
+    dom.trainDatasetInput.onchange = handleDatasetUpload;
+
+    // 绑定按钮事件
+    dom.btnOpenTrainingParams.onclick = window.openTrainingParamsModal;
+    dom.startTrainBtn.onclick = window.startTraining;
+
+    // 启动训练轮询
+    startTrainingPoller();
+
     // 9. 模态框优化：ESC键关闭和点击背景关闭
     setupModalOptimizations();
+
+    // 10. 绑定模型详情页的基础模型跳转点击事件
+    dom.detailsBaseModelLink.onclick = async (e) => {
+        e.preventDefault();
+        const targetModel = e.target.dataset.target;
+        if (targetModel) {
+            state.currentDetailsModelName = targetModel;
+            await loadModelDetails(targetModel);
+            await refreshApp();
+        }
+    };
 }
 /**
  * 业务处理器：单张预测
@@ -349,6 +384,40 @@ export async function refreshApp() {
         (name, category) => openDeleteModal(name, category)
     );
     
+    // 详情页面：已训练模型展示 (允许重命名和删除，点击加载详情)
+    ui.renderModelList(dom.trainedList, data.models.trained, 'trained', state.currentDetailsModelName, 
+        async (name) => {
+            if (name === state.currentDetailsModelName) return;
+            state.currentDetailsModelName = name;
+            await loadModelDetails(name);
+            await refreshApp(); // 刷新列表高亮
+        }, 
+        (name, category) => {
+            dom.oldNameHidden.value = name;
+            dom.categoryHidden.value = category;
+            dom.renameInput.value = name.replace('.pt', '');
+            dom.renameModal.classList.remove('hidden');
+            setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
+        },
+        (name, category) => openDeleteModal(name, category)
+    );
+
+    // 识别页面：已训练模型展示 (允许识别切换，允许重命名和删除)
+    ui.renderModelList(dom.inferenceTrainedList, data.models.trained, 'trained', state.currentModelName, 
+        handleModelSwitch, 
+        (name, category) => {
+            dom.oldNameHidden.value = name;
+            dom.categoryHidden.value = category;
+            dom.renameInput.value = name.replace('.pt', '');
+            dom.renameModal.classList.remove('hidden');
+            setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
+        },
+        (name, category) => openDeleteModal(name, category)
+    );
+
+    // 给训练页面的基础模型下拉列表赋值
+    ui.renderTrainBaseModels(data.models);
+
     refreshHistory();
 }
 
@@ -418,4 +487,161 @@ function setupModalOptimizations() {
             }
         }
     });
+}
+
+// ==========================================
+// 训练相关业务逻辑 (YOLO Training)
+// ==========================================
+
+let uploadedDatasetPath = "";
+let trainingPoller = null;
+
+async function handleDatasetUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    dom.trainDatasetName.innerText = '上传并解压中...';
+    dom.uploadDatasetBtn.disabled = true;
+
+    try {
+        const res = await api.uploadDataset(file);
+        const data = await res.json();
+        
+        if (res.ok && data.status === 'success') {
+            uploadedDatasetPath = data.dataset_path;
+            dom.trainDatasetName.innerText = `[就绪] ${file.name}`;
+            dom.trainDatasetName.style.color = '#4ade80';
+        } else {
+            throw new Error(data.detail || '未知错误');
+        }
+    } catch (err) {
+        alert(err.message);
+        dom.trainDatasetName.innerText = '上传失败/格式错误';
+        dom.trainDatasetName.style.color = '#f87171';
+        dom.trainDatasetInput.value = '';
+    } finally {
+        dom.uploadDatasetBtn.disabled = false;
+    }
+}
+
+function collectTrainingParams() {
+    return {
+        epochs: document.getElementById('p_epochs').value,
+        patience: document.getElementById('p_patience').value,
+        batch: document.getElementById('p_batch').value,
+        imgsz: document.getElementById('p_imgsz').value,
+        optimizer: document.getElementById('p_optimizer').value,
+        lr0: document.getElementById('p_lr0').value,
+        lrf: document.getElementById('p_lrf').value,
+        momentum: document.getElementById('p_momentum').value,
+        weight_decay: document.getElementById('p_weight_decay').value,
+        warmup_epochs: document.getElementById('p_warmup_epochs').value,
+        warmup_momentum: document.getElementById('p_warmup_momentum').value,
+        cos_lr: document.getElementById('p_cos_lr').checked,
+        
+        hsv_h: document.getElementById('p_hsv_h').value,
+        hsv_s: document.getElementById('p_hsv_s').value,
+        hsv_v: document.getElementById('p_hsv_v').value,
+        degrees: document.getElementById('p_degrees').value,
+        translate: document.getElementById('p_translate').value,
+        scale: document.getElementById('p_scale').value,
+        shear: document.getElementById('p_shear').value,
+        perspective: document.getElementById('p_perspective').value,
+        flipud: document.getElementById('p_flipud').value,
+        fliplr: document.getElementById('p_fliplr').value,
+        mosaic: document.getElementById('p_mosaic').value,
+        mixup: document.getElementById('p_mixup').value,
+        copy_paste: document.getElementById('p_copy_paste').value,
+
+        seed: document.getElementById('p_seed').value,
+        workers: document.getElementById('p_workers').value,
+        device: document.getElementById('p_device').value,
+        amp: document.getElementById('p_amp').checked
+    };
+}
+
+async function handleStartTraining() {
+    const baseModel = dom.trainBaseModel.value;
+    const newModelName = dom.trainNewModelName.value.trim();
+    
+    if (!baseModel) return alert("请先选择基础模型！");
+    if (!newModelName) return alert("请填写新模型名称！");
+    if (!uploadedDatasetPath) return alert("请先上传并成功解析您的训练集 (zip压缩包包括data.yaml)！");
+
+    const params = collectTrainingParams();
+    dom.startTrainBtn.disabled = true;
+    dom.startTrainBtn.innerText = '准备工作中...';
+    
+    // 给后台一些反应时间显示准备中状态
+    dom.trainingDashboard.style.display = 'block';
+    dom.trainStatusLabel.innerText = "状态: 环境校验与初始化中...";
+    dom.trainEtaLabel.innerText = "预计剩余时间: 计算中...";
+    dom.trainProgressFill.style.width = '0%';
+    dom.trainEpochLabel.innerText = `0 / ${params.epochs} Epochs`;
+
+    try {
+        const res = await api.startTraining(newModelName, baseModel, uploadedDatasetPath, params);
+        const data = await res.json();
+        if (res.ok) {
+            alert('训练任务已在后台启动！您可以从进度面板查看。');
+        } else {
+            alert(data.detail || '启动训练失败');
+        }
+    } catch (e) {
+        alert('启动训练出错: ' + e.message);
+    } finally {
+        // 解除按钮锁定
+        dom.startTrainBtn.disabled = false;
+        dom.startTrainBtn.innerText = '开始训练';
+    }
+}
+
+function startTrainingPoller() {
+    if (trainingPoller) clearInterval(trainingPoller);
+    
+    trainingPoller = setInterval(async () => {
+        try {
+            // 每 2 秒拉取一次训练状态并更新 UI
+            const data = await api.getTrainingProgress();
+            
+            // 如果后端正在训练或刚结束，渲染 Dashboard
+            if (data.status === 'training' || data.status === 'success' || data.status === 'error') {
+                if(data.model_name) {
+                    dom.trainingDashboard.style.display = 'block';
+                    ui.updateTrainingDashboard(data);
+                }
+            }
+
+            // --- 新增：检测训练完成并弹出通知 ---
+            if (state.lastTrainingStatus === 'training' && data.status === 'success') {
+                state.lastTrainingStatus = 'success';
+                alert(`🎉 训练完成！新模型 "${data.model_name}" 已就绪。\n点击确认后将刷新页面以加载最新数据。`);
+                window.location.reload(); // 刷新页面，让 Part 1 和 Part 3 看到模型
+            } else if (state.lastTrainingStatus === 'training' && data.status === 'error') {
+                state.lastTrainingStatus = 'error';
+                alert(`❌ 训练出错：${data.error_msg || '未知错误'}`);
+            } else {
+                // 平时同步状态
+                state.lastTrainingStatus = data.status;
+            }
+        } catch (e) {
+            console.warn("拉取训练状态失败", e);
+        }
+    }, 2000);
+}
+
+// 加载训练模型详细信息
+async function loadModelDetails(modelName) {
+    try {
+        const res = await api.getTrainingHistory(modelName);
+        if (res.status === 'success') {
+            ui.renderModelDetails(res.data);
+        } else {
+            ui.renderModelDetails(null);
+            alert(res.detail || '未找到该模型的训练记录');
+        }
+    } catch (e) {
+        ui.renderModelDetails(null);
+        alert('获取历史记录失败: ' + e.message);
+    }
 }

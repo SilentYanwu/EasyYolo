@@ -109,5 +109,42 @@ export const api = {
      */
     async clearHistory(modelName) {
         return await fetch(`${API_BASE}/history?model_name=${modelName}`, { method: 'DELETE' });
+    },
+
+    /**
+     * 上传并解压数据集
+     */
+    async uploadDataset(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await fetch(`${API_BASE}/upload_dataset`, { method: 'POST', body: formData });
+    },
+
+    /**
+     * 开始模型训练
+     */
+    async startTraining(modelName, baseModel, datasetYamlPath, parameters) {
+        const formData = new FormData();
+        formData.append('model_name', modelName);
+        formData.append('base_model', baseModel);
+        formData.append('dataset_yaml_path', datasetYamlPath);
+        formData.append('parameters', JSON.stringify(parameters));
+        return await fetch(`${API_BASE}/start_training`, { method: 'POST', body: formData });
+    },
+
+    /**
+     * 获取训练实时进度
+     */
+    async getTrainingProgress() {
+        const res = await fetch(`${API_BASE}/training_progress`);
+        return await res.json();
+    },
+
+    /**
+     * 获取单一模型训练详细历史
+     */
+    async getTrainingHistory(modelName) {
+        const res = await fetch(`${API_BASE}/training_history/${modelName}`);
+        return await res.json();
     }
 };
