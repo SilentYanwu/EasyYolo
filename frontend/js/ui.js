@@ -277,9 +277,9 @@ export const ui = {
         // 渲染模型介绍
         if (detailsData.description && detailsData.description.trim()) {
             dom.detailsModelDescription.innerText = `📝 ${detailsData.description}`;
-            dom.detailsModelDescription.style.display = 'block';
+            dom.detailsModelDescription.classList.add('show');
         } else {
-            dom.detailsModelDescription.style.display = 'none';
+            dom.detailsModelDescription.classList.remove('show');
         }
 
         // 渲染参数表

@@ -12,7 +12,8 @@ def clear_target_folders():
         os.path.join(base_dir, "database"),
         os.path.join(base_dir, "datasets"),
         os.path.join(base_dir, "backend", "trainchart"),
-        os.path.join(base_dir, "runs")
+        os.path.join(base_dir, "runs"),
+        os.path.join(base_dir, "models", "trained"),
 
     ]
 

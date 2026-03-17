@@ -7,26 +7,29 @@
 @import url('components/modals.css');
 @import url('components/history.css');
 @import url('components/batch.css');
+@import url('components/inference.css');
+@import url('components/training.css');
+@import url('components/details.css');
 @import url('utils/animations.css');
 
-/* 全局滚动条美化 */
+/* 全局滚动条美化 - 暗色调 */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #2d2d2d;
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: #4a4a4a;
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: #5a5a5a;
 }
 
 /* 上下文菜单 */

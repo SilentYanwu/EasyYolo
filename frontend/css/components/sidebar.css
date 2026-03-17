@@ -9,6 +9,12 @@
     overflow-y: auto;
 }
 
+.sidebar-header {
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: 10px;
+}
+
 /* 侧边栏滚动条：超细、贴边、低调 */
 .sidebar::-webkit-scrollbar {
     width: 4px;

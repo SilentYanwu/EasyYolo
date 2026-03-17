@@ -23,7 +23,9 @@
     flex-shrink: 0;
 }
 
+/* 顶部栏标题 */
 .top-bar h1 {
+    margin: 0;
     font-size: 1.5rem;
     color: var(--text-dark);
 }

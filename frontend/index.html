@@ -30,7 +30,7 @@
     <div id="page-inference" class="app-container">
         <!-- 侧边栏：识别专用 -->
         <aside class="sidebar">
-            <div class="sidebar-header" style="display: flex; justify-content: flex-end; padding-bottom: 10px;">
+            <div class="sidebar-header">
                 <button class="sidebar-close-btn" onclick="toggleSidebar(this)" title="关闭侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -55,9 +55,8 @@
 
         <!-- 主内容区：识别专用 -->
         <main class="main-content">
-            <header class="top-bar" style="display: flex; align-items: center;">
-                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏"
-                    style="margin-right: 15px;">
+            <header class="top-bar">
+                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -137,7 +136,7 @@
     <div id="page-training" class="app-container" style="display: none;">
         <!-- 侧边栏：训练专用 -->
         <aside class="sidebar">
-            <div class="sidebar-header" style="display: flex; justify-content: flex-end; padding-bottom: 10px;">
+            <div class="sidebar-header">
                 <button class="sidebar-close-btn" onclick="toggleSidebar(this)" title="关闭侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -146,44 +145,35 @@
                     </svg>
                 </button>
             </div>
-            <div class="model-section" style="padding: 10px 5px;">
-                <h3 style="color: #38bdf8; font-size: 15px; margin-bottom: 12px;">📖 训练快速指南</h3>
-                <div style="color: #94a3b8; font-size: 13px; line-height: 1.8;">
-                    <div
-                        style="margin-bottom: 14px; padding: 10px; background: #0f172a; border-radius: 6px; border-left: 3px solid #3b82f6;">
+            <div class="model-section training-guide">
+                <h3>📖 训练快速指南</h3>
+                <div>
+                    <div class="guide-item">
                         <b style="color: #60a5fa;">① 选择基础模型</b><br>
                         从下拉框选择预训练权重。<br>
-                        <span style="color: #64748b;">• yolo11n — 最轻量(快速)<br>• yolo11s — 小型(平衡)<br>• yolo11m —
-                            中型(精确)</span>
+                        <span>• yolo11n — 最轻量(快速)<br>• yolo11s — 小型(平衡)<br>• yolo11m — 中型(精确)</span>
                     </div>
-                    <div
-                        style="margin-bottom: 14px; padding: 10px; background: #0f172a; border-radius: 6px; border-left: 3px solid #8b5cf6;">
+                    <div class="guide-item" style="border-left-color: #8b5cf6;">
                         <b style="color: #a78bfa;">② 命名新模型</b><br>
-                        给训练产物起一个有辨识度的名字，如 <code style="color: #fbbf24;">steel_v1</code>。
+                        给训练产物起一个有辨识度的名字，如 <code>steel_v1</code>。
                     </div>
-                    <div
-                        style="margin-bottom: 14px; padding: 10px; background: #0f172a; border-radius: 6px; border-left: 3px solid #10b981;">
+                    <div class="guide-item" style="border-left-color: #10b981;">
                         <b style="color: #34d399;">③ 上传数据集</b><br>
                         上传标准 YOLO 格式的 ZIP 压缩包。<br>
-                        <span style="color: #64748b;">需含 <code style="color: #fbbf24;">data.yaml</code> 及 images/labels
-                            目录。</span>
+                        <span>需含 <code>data.yaml</code> 及 images/labels 目录。</span>
                     </div>
-                    <div
-                        style="margin-bottom: 14px; padding: 10px; background: #0f172a; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                    <div class="guide-item" style="border-left-color: #f59e0b;">
                         <b style="color: #fbbf24;">④ 调整参数(可选)</b><br>
                         点击「调整训练参数」按钮可配置 epochs、batch、学习率等 30+ 项超参数。
                     </div>
-                    <div
-                        style="padding: 10px; background: #0f172a; border-radius: 6px; border-left: 3px solid #ef4444;">
+                    <div class="guide-item" style="border-left-color: #ef4444;">
                         <b style="color: #f87171;">⑤ 开始训练</b><br>
                         点击「开始训练」后系统将在 GPU 上运行 YOLOv11 训练，实时展示进度与指标。
                     </div>
                 </div>
-                <div
-                    style="margin-top: 18px; padding: 10px; background: linear-gradient(135deg, #1e3a5f, #1e293b); border-radius: 6px; border: 1px solid #334155;">
-                    <b style="color: #38bdf8; font-size: 13px;">💡 小贴士</b>
-                    <ul
-                        style="color: #94a3b8; font-size: 12px; padding-left: 18px; margin: 6px 0 0 0; line-height: 1.7;">
+                <div class="guide-tips">
+                    <b>💡 小贴士</b>
+                    <ul>
                         <li>可用已训练模型作为基础模型做迁移学习</li>
                         <li>数据集越大效果越好，建议 ≥500 张</li>
                         <li>GPU 显存不足时可降低 batch 或 imgsz</li>
@@ -194,9 +184,8 @@
         </aside>
         <!-- 主内容区：训练专用 -->
         <main class="main-content">
-            <header class="top-bar" style="display: flex; align-items: center;">
-                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏"
-                    style="margin-right: 15px;">
+            <header class="top-bar">
+                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -205,87 +194,67 @@
                 </button>
                 <h1 style="margin: 0;">模型训练工作台</h1>
             </header>
-            <div class="workspace" id="training-workspace"
-                style="display: flex; flex-direction: column; padding: 20px; gap: 20px; overflow-y: auto;">
+            <div class="workspace" id="training-workspace">
 
                 <!-- 训练控制区 -->
-                <div class="control-panel training-controls"
-                    style="display: flex; flex-direction: column; gap: 20px; width: 100%; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 25px; border-radius: 12px; border: 1px solid #334155;">
+                <div class="control-panel training-controls">
 
                     <!-- 标题区域 -->
-                    <div
-                        style="display: flex; align-items: center; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid #334155;">
-                        <span style="font-size: 22px;">🔧</span>
-                        <h2 style="margin: 0; color: #fff; font-size: 18px;">训练任务配置</h2>
+                    <div class="training-controls-header">
+                        <span class="training-controls-icon">🔧</span>
+                        <h2>训练任务配置</h2>
                     </div>
 
                     <!-- 第一行：基础模型 + 新模型名 + 模型介绍 -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-                        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="color: #60a5fa; font-size: 13px; font-weight: 600;">🎯 选取基础模型</label>
-                            <select id="trainBaseModel" class="form-select"
-                                style="padding: 10px 12px; border-radius: 6px; background: #0f172a; color: #fff; border: 1px solid #334155; height: 42px; font-size: 14px; transition: border-color 0.2s;"></select>
+                        <div class="form-group">
+                            <label class="label-primary">🎯 选取基础模型</label>
+                            <select id="trainBaseModel" class="form-select"></select>
                             <span style="color: #64748b; font-size: 11px;">选择预训练的 YOLO 模型作为训练起点</span>
                         </div>
-                        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="color: #a78bfa; font-size: 13px; font-weight: 600;">✏️ 新模型名称</label>
-                            <input type="text" id="trainNewModelName" placeholder="例如: pcb_defect_v1" class="form-input"
-                                style="padding: 10px 12px; border-radius: 6px; background: #0f172a; color: #fff; border: 1px solid #334155; height: 42px; font-size: 14px;">
+                        <div class="form-group">
+                            <label class="label-purple">✏️ 新模型名称</label>
+                            <input type="text" id="trainNewModelName" placeholder="例如: pcb_defect_v1" class="form-input">
                             <span style="color: #64748b; font-size: 11px;">训练完成后保存的模型文件名</span>
                         </div>
-                        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="color: #34d399; font-size: 13px; font-weight: 600;">📝 模型介绍 (选填)</label>
+                        <div class="form-group">
+                            <label class="label-success">📝 模型介绍 (选填)</label>
                             <input type="text" id="trainModelDescription" placeholder="例如: 钢材表面缺陷检测模型"
-                                class="form-input"
-                                style="padding: 10px 12px; border-radius: 6px; background: #0f172a; color: #fff; border: 1px solid #334155; height: 42px; font-size: 14px;">
-                            <span style="color: #64748b; font-size: 11px;">可在训练详情中查看此介绍</span>
+                                class="form-input">
+                            <span>可在训练详情中查看此介绍</span>
                         </div>
                     </div>
 
                     <!-- 第二行：数据集上传 + 操作按钮 -->
-                    <div style="display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;">
-                        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                            <label style="color: #fbbf24; font-size: 13px; font-weight: 600;">📦 上传训练集 (ZIP压缩包)</label>
-                            <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="dataset-upload-section">
+                        <div class="form-group">
+                            <label class="label-warning">📦 上传训练集 (ZIP压缩包)</label>
+                            <div class="dataset-upload-controls">
                                 <input type="file" id="trainDatasetInput" accept=".zip" hidden>
-                                <button class="btn info" id="uploadDatasetBtn"
-                                    style="height: 42px; min-width: 130px; font-size: 14px; border-radius: 6px;">上传数据集</button>
-                                <span id="trainDatasetName" style="color: #cbd5e1; font-size: 13px;">未选择</span>
+                                <button class="btn info" id="uploadDatasetBtn">上传数据集</button>
+                                <span id="trainDatasetName">未选择</span>
                             </div>
                         </div>
-                        <div class="form-group" style="display: flex; gap: 12px;">
-                            <button class="btn info" id="btnOpenTrainingParams"
-                                style="height: 42px; min-width: 140px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); border: none; font-weight: 600; font-size: 14px; border-radius: 6px; box-shadow: 0 2px 8px rgba(14,165,233,0.3);">⚙️
-                                调整训练参数</button>
-                            <button class="btn success" id="startTrainBtn"
-                                style="height: 42px; min-width: 130px; font-size: 14px; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 8px rgba(34,197,94,0.3);">🚀
-                                开始训练</button>
+                        <div class="form-group">
+                            <button class="btn info" id="btnOpenTrainingParams">⚙️ 调整训练参数</button>
+                            <button class="btn success" id="startTrainBtn">🚀 开始训练</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 训练进度与监控面板 -->
-                <div class="training-dashboard" id="trainingDashboard"
-                    style="display:none; padding:25px; background:#1e293b; border-radius:8px; width: 100%;">
-                    <h3 style="margin-top:0; color: #fff; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                        训练进度监控</h3>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; margin-top: 15px;">
-                        <span id="trainStatusLabel" style="color: #94a3b8; font-size: 15px;">状态: 准备中...</span>
-                        <span id="trainEtaLabel" style="color: #38bdf8; font-weight: bold; font-size: 15px;">预计剩余时间:
-                            --</span>
+                <div class="training-dashboard" id="trainingDashboard">
+                    <h3>训练进度监控</h3>
+                    <div class="training-status">
+                        <span id="trainStatusLabel">状态: 准备中...</span>
+                        <span id="trainEtaLabel">预计剩余时间: --</span>
                     </div>
-                    <div class="progress-bar"
-                        style="height:24px; background:#0f172a; border-radius:12px; overflow:hidden; border: 1px solid #334155; position: relative;">
-                        <div id="trainProgressFill"
-                            style="height:100%; width:0%; background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); transition:width 0.5s ease-in-out;">
-                        </div>
-                        <span id="trainEpochLabel"
-                            style="position: absolute; width: 100%; text-align: center; top: 2px; font-size: 13px; font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">0
-                            / 0 Epochs</span>
+                    <div class="progress-bar training-progress">
+                        <div id="trainProgressFill"></div>
+                        <span id="trainEpochLabel">0 / 0 Epochs</span>
                     </div>
 
-                    <div class="metrics-grid" id="trainMetricsGrid"
-                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:15px; margin-top:25px;">
+                    <div class="metrics-grid" id="trainMetricsGrid">
                         <!-- 动态生成的指标卡片 -->
                     </div>
                 </div>
@@ -298,7 +267,7 @@
     <div id="page-details" class="app-container" style="display: none;">
         <!-- 侧边栏：详情专用 -->
         <aside class="sidebar">
-            <div class="sidebar-header" style="display: flex; justify-content: flex-end; padding-bottom: 10px;">
+            <div class="sidebar-header">
                 <button class="sidebar-close-btn" onclick="toggleSidebar(this)" title="关闭侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -314,9 +283,8 @@
         </aside>
         <!-- 主内容区：详情专用 -->
         <main class="main-content">
-            <header class="top-bar" style="display: flex; align-items: center;">
-                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏"
-                    style="margin-right: 15px;">
+            <header class="top-bar">
+                <button class="open-sidebar-btn" onclick="toggleSidebar(this)" title="打开侧边栏">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -325,38 +293,34 @@
                 </button>
                 <h1 style="margin: 0;">模型评估与详情</h1>
             </header>
-            <div class="workspace" id="details-workspace"
-                style="display: flex; flex-direction: column; padding: 20px; gap: 20px; overflow-y: auto;">
-                <div id="detailsPlaceholder"
-                    style="display: flex; justify-content: center; align-items: center; flex-direction: column; height: 100%; text-align: center;">
-                    <img src="https://cdn-icons-png.flaticon.com/512/3052/3052825.png" width="100"
-                        style="opacity: 0.3; margin-bottom: 20px;">
-                    <h2 style="color: #94a3b8;">请从左侧选择一个经过训练的模型来查看详情</h2>
+            <div class="workspace" id="details-workspace">
+                <div id="detailsPlaceholder">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3052/3052825.png" width="100" class="placeholder-icon">
+                    <h2>请从左侧选择一个经过训练的模型来查看详情</h2>
                 </div>
 
-                <div id="detailsContent" style="display: none; flex-direction: column; gap: 20px;">
-                    <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 5px;">
-                            <h2 style="margin: 0; color: #fff;" id="detailsModelName">Model Name</h2>
-                            <div style="color: #cbd5e1; font-size: 14px;">
-                                基础模型: <a href="#" id="detailsBaseModelLink"
-                                    style="color: #38bdf8; text-decoration: none; font-weight: bold;">base_model</a>
+                <div id="detailsContent">
+                    <div class="model-info-card">
+                        <div class="model-info-header">
+                            <h2 id="detailsModelName">Model Name</h2>
+                            <div>
+                                基础模型: <a href="#" id="detailsBaseModelLink">base_model</a>
+                            </div>
+                            <div class="training-time">
+                                训练完成时间: <span id="detailsTrainingTime">--</span>
                             </div>
                         </div>
-                        <div id="detailsModelDescription"
-                            style="color: #94a3b8; font-size: 14px; margin-bottom: 15px; font-style: italic; display: none;">
+                        <div id="detailsModelDescription">
                         </div>
 
-                        <h3 style="color: #38bdf8; margin-bottom: 10px; font-size: 16px;">📋 训练超参数</h3>
-                        <div
-                            style="max-height: 350px; overflow-y: auto; border: 1px solid #334155; border-radius: 6px; background: #0f172a; padding: 12px;">
-                            <table style="width: 100%; border-collapse: collapse; color: #cbd5e1; font-size: 14px;">
+                        <h3>📋 训练超参数</h3>
+                        <div class="params-table-container">
+                            <table class="params-table">
                                 <thead>
-                                    <tr style="border-bottom: 1px solid #334155; text-align: left;">
-                                        <th style="padding: 10px; font-size: 14px;">参数名</th>
-                                        <th style="padding: 10px; font-size: 14px;">设定值</th>
-                                        <th style="padding: 10px; font-size: 14px;">参数含义</th>
+                                    <tr>
+                                        <th>参数名</th>
+                                        <th>设定值</th>
+                                        <th>参数含义</th>
                                     </tr>
                                 </thead>
                                 <tbody id="detailsParamsTable">
@@ -366,10 +330,9 @@
                         </div>
                     </div>
 
-                    <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
-                        <h3 style="color: #38bdf8; margin-top: 0; margin-bottom: 15px;">模型评估图表</h3>
-                        <div id="detailsChartsGrid"
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div class="charts-section">
+                        <h3>模型评估图表</h3>
+                        <div id="detailsChartsGrid" class="charts-grid">
                             <!-- 动态插入生成的图表 -->
                         </div>
                     </div>
@@ -458,16 +421,14 @@
     <div id="trainingParamsModal" class="modal hidden">
         <div class="modal-content large-modal"
             style="max-width: 800px; width: 90%; max-height: 90vh; display: flex; flex-direction: column; background: #1e293b; color: #f8fafc; border: 1px solid #334155;">
-            <h3 style="border-bottom: 1px solid #334155; padding-bottom: 15px; margin-top: 0;">训练参数调节 <span
-                    style="font-size: 14px; font-weight: normal; color: #94a3b8;">(高级用户设置)</span></h3>
-            <div class="params-container" style="flex:1; overflow-y:auto; padding-right:10px; margin-top: 15px;">
+            <h3>训练参数调节 <span class="modal-subtitle">(高级用户设置)</span></h3>
+            <div class="params-container">
 
                 <!-- 基础参数 -->
                 <fieldset class="param-fieldset"
                     style="border: 1px solid #334155; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
                     <legend style="padding: 0 10px; font-weight: bold; color: #38bdf8;">基础参数 (Base)</legend>
-                    <div class="param-grid"
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div class="param-grid">
                         <div class="param-item">
                             <label>Epochs: <span class="help-text">训练的轮数</span></label>
                             <input type="number" id="p_epochs" value="5" min="1" class="form-input">
@@ -488,11 +449,9 @@
                 </fieldset>
 
                 <!-- 优化器策略 -->
-                <fieldset class="param-fieldset"
-                    style="border: 1px solid #334155; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-                    <legend style="padding: 0 10px; font-weight: bold; color: #38bdf8;">优化策略 (Optimizer & LR)</legend>
-                    <div class="param-grid"
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                <fieldset class="param-fieldset">
+                    <legend>优化策略 (Optimizer & LR)</legend>
+                    <div class="param-grid">
                         <div class="param-item">
                             <label>Optimizer: <span class="help-text">优化器类型</span></label>
                             <select id="p_optimizer" class="form-select">
@@ -526,10 +485,9 @@
                             <label>Warmup Momentum: <span class="help-text">预热动量</span></label>
                             <input type="number" id="p_warmup_momentum" value="0.8" step="0.01" class="form-input">
                         </div>
-                        <div class="param-item" style="display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" id="p_cos_lr" style="width: auto;">
-                            <label style="margin:0;">Cos LR <span class="help-text"
-                                    style="display:inline;">余弦退火学习率</span></label>
+                        <div class="param-item checkbox-item">
+                            <input type="checkbox" id="p_cos_lr">
+                            <label>Cos LR <span class="help-text">余弦退火学习率</span></label>
                         </div>
                     </div>
                 </fieldset>
@@ -538,8 +496,7 @@
                 <fieldset class="param-fieldset"
                     style="border: 1px solid #334155; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
                     <legend style="padding: 0 10px; font-weight: bold; color: #38bdf8;">数据增强 (Augmentation)</legend>
-                    <div class="param-grid"
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div class="param-grid">
                         <div class="param-item"><label>hsv_h: <span class="help-text">色调</span></label><input
                                 type="number" id="p_hsv_h" value="0.015" step="0.001" class="form-input"></div>
                         <div class="param-item"><label>hsv_s: <span class="help-text">饱和度</span></label><input
@@ -574,8 +531,7 @@
                 <fieldset class="param-fieldset"
                     style="border: 1px solid #334155; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
                     <legend style="padding: 0 10px; font-weight: bold; color: #38bdf8;">系统设置 (System & Misc)</legend>
-                    <div class="param-grid"
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div class="param-grid">
                         <div class="param-item"><label>Seed: <span class="help-text">随机种子固定</span></label><input
                                 type="number" id="p_seed" value="42" class="form-input"></div>
                         <div class="param-item"><label>Workers: <span class="help-text">数据加载线程数</span></label><input
@@ -592,12 +548,9 @@
                 </fieldset>
 
             </div>
-            <div class="modal-actions"
-                style="margin-top:20px; text-align:right; border-top: 1px solid #334155; padding-top: 15px;">
-                <button onclick="closeTrainingParamsModal()"
-                    style="background: transparent; color: #cbd5e1; border: 1px solid #475569; padding: 8px 16px; border-radius: 4px; cursor: pointer;">取消</button>
-                <button onclick="saveTrainingParams()" class="btn primary"
-                    style="background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-left: 10px;">确认保存参数</button>
+            <div class="modal-actions">
+                <button onclick="closeTrainingParamsModal()" class="btn-cancel">取消</button>
+                <button onclick="saveTrainingParams()" class="btn primary">确认保存参数</button>
             </div>
         </div>
     </div>

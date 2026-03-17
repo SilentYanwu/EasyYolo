@@ -1,7 +1,7 @@
 ============================================================
 项目结构: EasyYolo
-生成时间: 2026-03-17 16:44:08
-统计信息: 22 个文件夹, 39 个文件
+生成时间: 2026-03-17 18:46:49
+统计信息: 22 个文件夹, 42 个文件
 ============================================================
 
 EasyYolo/
@@ -31,27 +31,30 @@ EasyYolo/
 │   ├── assets/
 │   ├── css/
 │   │   ├── base/
-│   │   │   ├── layout.css (4.9 KB)
+│   │   │   ├── layout.css (5.0 KB)
 │   │   │   ├── reset.css (515.0 B)
 │   │   │   └── variables.css (1.2 KB)
 │   │   ├── components/
 │   │   │   ├── batch.css (2.5 KB)
 │   │   │   ├── buttons.css (6.7 KB)
+│   │   │   ├── details.css (2.6 KB)
 │   │   │   ├── history.css (2.9 KB)
-│   │   │   ├── modals.css (6.7 KB)
-│   │   │   └── sidebar.css (2.4 KB)
+│   │   │   ├── inference.css (1.4 KB)
+│   │   │   ├── modals.css (7.4 KB)
+│   │   │   ├── sidebar.css (2.5 KB)
+│   │   │   └── training.css (4.7 KB)
 │   │   ├── utils/
 │   │   │   └── animations.css (3.1 KB)
-│   │   └── style.css (1.5 KB)
+│   │   └── style.css (1.6 KB)
 │   ├── js/
-│   │   ├── api.js (4.1 KB)
+│   │   ├── api.js (4.2 KB)
 │   │   ├── config.js (106.0 B)
-│   │   ├── dom.js (4.3 KB)
+│   │   ├── dom.js (4.4 KB)
 │   │   ├── events.js (24.4 KB)
 │   │   ├── main.js (508.0 B)
 │   │   ├── state.js (601.0 B)
-│   │   └── ui.js (17.3 KB)
-│   └── index.html (39.0 KB)
+│   │   └── ui.js (17.7 KB)
+│   └── index.html (31.5 KB)
 ├── models/
 │   ├── raw/
 │   │   ├── yolo11m.pt (38.8 MB)
@@ -65,7 +68,7 @@ EasyYolo/
 ├── generate_structure.py (6.1 KB)
 ├── run_frontend.py (1.8 KB)
 ├── 日志.md (3.0 KB)
-└── 项目结构.txt (2.7 KB)
+└── 项目结构.txt (2.9 KB)
 
 ============================================================
 忽略的文件夹/文件:
