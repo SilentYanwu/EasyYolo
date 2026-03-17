@@ -206,7 +206,7 @@
                     </div>
 
                     <!-- 第一行：基础模型 + 新模型名 + 模型介绍 -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;">
                         <div class="form-group">
                             <label class="label-primary">🎯 选取基础模型</label>
                             <select id="trainBaseModel" class="form-select"></select>
@@ -235,8 +235,10 @@
                                 <span id="trainDatasetName">未选择</span>
                             </div>
                         </div>
+                         <div>
+                             <button class="btn info" id="btnOpenTrainingParams">⚙️ 调整训练参数</button>
+                         </div>                          
                         <div class="form-group">
-                            <button class="btn info" id="btnOpenTrainingParams">⚙️ 调整训练参数</button>
                             <button class="btn success" id="startTrainBtn">🚀 开始训练</button>
                         </div>
                     </div>
@@ -302,15 +304,21 @@
                 <div id="detailsContent">
                     <div class="model-info-card">
                         <div class="model-info-header">
-                            <h2 id="detailsModelName">Model Name</h2>
-                            <div>
-                                基础模型: <a href="#" id="detailsBaseModelLink">base_model</a>
+                            <div class="model-name-section">
+                                <h2 id="detailsModelName">Model Name</h2>
+                                <div class="model-dataset" id="detailsDatasetName">--</div>
                             </div>
-                            <div class="training-time">
-                                训练完成时间: <span id="detailsTrainingTime">--</span>
+                            <div class="model-desc-section">
+                                <div id="detailsModelDescription">--</div>
                             </div>
-                        </div>
-                        <div id="detailsModelDescription">
+                            <div class="model-meta-section">
+                                <div class="base-model">
+                                    基础模型: <a href="#" id="detailsBaseModelLink">base_model</a>
+                                </div>
+                                <div class="training-time">
+                                    训练完成时间: <span id="detailsTrainingTime">--</span>
+                                </div>
+                            </div>
                         </div>
 
                         <h3>📋 训练超参数</h3>

@@ -563,6 +563,7 @@ function collectTrainingParams() {
 async function handleStartTraining() {
     const baseModel = dom.trainBaseModel.value;
     const newModelName = dom.trainNewModelName.value.trim();
+    const modelDescription = document.getElementById('trainModelDescription').value.trim();
     
     if (!baseModel) return alert("请先选择基础模型！");
     if (!newModelName) return alert("请填写新模型名称！");
@@ -580,7 +581,7 @@ async function handleStartTraining() {
     dom.trainEpochLabel.innerText = `0 / ${params.epochs} Epochs`;
 
     try {
-        const res = await api.startTraining(newModelName, baseModel, uploadedDatasetPath, params);
+        const res = await api.startTraining(newModelName, baseModel, uploadedDatasetPath, params, modelDescription);
         const data = await res.json();
         if (res.ok) {
             alert('训练任务已在后台启动！您可以从进度面板查看。');

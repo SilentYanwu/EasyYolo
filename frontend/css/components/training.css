@@ -97,8 +97,17 @@
 .dataset-upload-section {
     display: flex;
     align-items: flex-end;
-    gap: 20px;
+    gap: 30px;
     flex-wrap: wrap;
+}
+
+/* 数据集上传区的按钮统一样式 */
+.dataset-upload-section .btn {
+    min-width: 160px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dataset-upload-section > .form-group:first-of-type {

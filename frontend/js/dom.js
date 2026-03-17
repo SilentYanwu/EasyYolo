@@ -76,6 +76,7 @@ export const dom = {
     detailsPlaceholder: document.getElementById('detailsPlaceholder'),
     detailsContent: document.getElementById('detailsContent'),
     detailsModelName: document.getElementById('detailsModelName'),
+    detailsDatasetName: document.getElementById('detailsDatasetName'),
     detailsBaseModelLink: document.getElementById('detailsBaseModelLink'),
     detailsTrainingTime: document.getElementById('detailsTrainingTime'),
     detailsParamsTable: document.getElementById('detailsParamsTable'),

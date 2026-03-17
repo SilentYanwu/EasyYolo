@@ -264,6 +264,7 @@ export const ui = {
         dom.detailsContent.style.display = 'flex';
 
         dom.detailsModelName.innerText = detailsData.model_name;
+        dom.detailsDatasetName.innerText = detailsData.dataset || '--';
         
         if (detailsData.base_model) {
             dom.detailsBaseModelLink.innerText = detailsData.base_model;
@@ -274,12 +275,13 @@ export const ui = {
             dom.detailsBaseModelLink.removeAttribute('data-target');
         }
 
+        dom.detailsTrainingTime.innerText = detailsData.time || '--';
+
         // 渲染模型介绍
         if (detailsData.description && detailsData.description.trim()) {
             dom.detailsModelDescription.innerText = `📝 ${detailsData.description}`;
-            dom.detailsModelDescription.classList.add('show');
         } else {
-            dom.detailsModelDescription.classList.remove('show');
+            dom.detailsModelDescription.innerText = '暂无介绍';
         }
 
         // 渲染参数表

@@ -123,12 +123,13 @@ export const api = {
     /**
      * 开始模型训练
      */
-    async startTraining(modelName, baseModel, datasetYamlPath, parameters) {
+    async startTraining(modelName, baseModel, datasetYamlPath, parameters, description) {
         const formData = new FormData();
         formData.append('model_name', modelName);
         formData.append('base_model', baseModel);
         formData.append('dataset_yaml_path', datasetYamlPath);
         formData.append('parameters', JSON.stringify(parameters));
+        formData.append('description', description || '');
         return await fetch(`${API_BASE}/start_training`, { method: 'POST', body: formData });
     },
 

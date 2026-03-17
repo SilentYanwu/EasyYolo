@@ -6,7 +6,7 @@ import sys
 
 # 设置前端目录路径
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
-PORT = 5500
+PORT = 5502
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -39,7 +39,7 @@ def run_server():
             port += 1
 
     if not httpd:
-        print("❌ 错误: 无法启动服务器，多个端口均被占用。请手动关闭占用 5500 的进程（如 Live Server）。")
+        print("❌ 错误: 无法启动服务器，多个端口均被占用。请手动关闭占用 5502 的进程（如 Live Server）。")
         return
 
     print(f"🚀 EasyYolo 前端服务器启动成功！")
