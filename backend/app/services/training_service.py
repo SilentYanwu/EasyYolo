@@ -82,7 +82,7 @@ class TrainingService:
                 os.remove(zip_path)
             raise HTTPException(status_code=500, detail=f"数据集处理失败: {str(e)}")
 
-    def start_training_task(self, model_name: str, base_model: str, dataset_yaml_path: str, params: dict):
+    def start_training_task(self, model_name: str, base_model: str, dataset_yaml_path: str, params: dict, description: str = ""):
         """
         启动后台训练线程
         """
@@ -103,12 +103,12 @@ class TrainingService:
         # 启动后台线程执行 YOLO.train 以免阻塞事件循环
         t = threading.Thread(
             target=self._run_yolo_training, 
-            args=(model_name, base_model, dataset_yaml_path, params)
+            args=(model_name, base_model, dataset_yaml_path, params, description)
         )
         t.start()
         return {"status": "success", "message": "训练任务已启动"}
 
-    def _run_yolo_training(self, model_name: str, base_model: str, dataset_yaml_path: str, params: dict):
+    def _run_yolo_training(self, model_name: str, base_model: str, dataset_yaml_path: str, params: dict, description: str):
         # 导入推理服务单例 (延迟导入避免循环引用)
         from services.yolo_service import yolo_service
 
@@ -257,7 +257,8 @@ class TrainingService:
                 model_name=final_model_filename,
                 base_model=base_model,
                 dataset=dataset_name_clean,
-                parameters=json.dumps(params, ensure_ascii=False)
+                parameters=json.dumps(params, ensure_ascii=False),
+                description=description
             )
 
             # D. 清理临时 runs 目录 (因为我们已经把产物迁移到了 models/trained 和 trainchart 里)

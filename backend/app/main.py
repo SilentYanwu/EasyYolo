@@ -272,11 +272,12 @@ def start_training(
     model_name: str = Form(...),
     base_model: str = Form(...),
     dataset_yaml_path: str = Form(...),
-    parameters: str = Form(...) # JSON string
+    parameters: str = Form(...), # JSON string
+    description: str = Form("") # 新增：模型介绍，默认为空
 ):
     try:
         params_dict = json.loads(parameters)
-        return training_service.start_training_task(model_name, base_model, dataset_yaml_path, params_dict)
+        return training_service.start_training_task(model_name, base_model, dataset_yaml_path, params_dict, description)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
