@@ -146,3 +146,19 @@
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
+
+/* 页面切换动画 */
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.app-container.page-active {
+    animation: pageFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}

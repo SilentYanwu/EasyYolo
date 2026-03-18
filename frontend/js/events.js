@@ -25,7 +25,7 @@ export function bindEvents() {
         resetDisplay(false);
         if (files.length === 1) {
             const reader = new FileReader();
-            reader.onload = (ev) => { dom.originalImg.src = ev.target.result; dom.originalImg.style.display='block'; };
+            reader.onload = (ev) => { dom.originalImg.src = ev.target.result; dom.originalImg.style.display = 'block'; };
             reader.readAsDataURL(files[0]);
             dom.statusText.innerText = '准备就绪';
         } else {
@@ -346,13 +346,13 @@ function openDeleteModal(modelName, category) {
 function openEditDescriptionModal(name) {
     if (!name) return;
     dom.descModelNameHidden.value = name;
-    
+
     // 如果是当前详情页的模型，可以从 UI 取初值
     let currentDesc = '';
     if (name === state.currentDetailsModelName) {
         currentDesc = dom.detailsModelDescription.innerText.replace('📝 ', '').replace('暂无介绍', '');
     }
-    
+
     dom.editDescriptionInput.value = currentDesc;
     dom.editDescriptionModal.classList.remove('hidden');
     setTimeout(() => dom.editDescriptionInput.focus(), 100);
@@ -425,33 +425,33 @@ export async function refreshApp() {
     const data = await api.getModels();
     state.currentModelName = data.current_model;
     dom.currentModelLabel.innerText = state.currentModelName;
-    
+
     // 官方模型 (raw): 不允许重命名和删除
-    ui.renderModelList(dom.rawList, data.models.raw, 'raw', state.currentModelName, 
+    ui.renderModelList(dom.rawList, data.models.raw, 'raw', state.currentModelName,
         handleModelSwitch, null, null);
-    
+
     // 导入模型 (yolo): 允许重命名和删除
-    ui.renderModelList(dom.yoloList, data.models.yolo, 'yolo', state.currentModelName, 
-        handleModelSwitch, 
+    ui.renderModelList(dom.yoloList, data.models.yolo, 'yolo', state.currentModelName,
+        handleModelSwitch,
         (name, category) => {
             dom.oldNameHidden.value = name;
             dom.categoryHidden.value = category;
             dom.renameInput.value = name.replace('.pt', '');
             dom.renameModal.classList.remove('hidden');
             setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
-        }, 
+        },
         (name, category) => openDeleteModal(name, category),
         (name) => openEditDescriptionModal(name)
     );
-    
+
     // 详情页面：已训练模型展示 (允许重命名和删除，点击加载详情)
-    ui.renderModelList(dom.trainedList, data.models.trained, 'trained', state.currentDetailsModelName, 
+    ui.renderModelList(dom.trainedList, data.models.trained, 'trained', state.currentDetailsModelName,
         async (name) => {
             if (name === state.currentDetailsModelName) return;
             state.currentDetailsModelName = name;
             await loadModelDetails(name);
             await refreshApp(); // 刷新列表高亮
-        }, 
+        },
         (name, category) => {
             dom.oldNameHidden.value = name;
             dom.categoryHidden.value = category;
@@ -464,8 +464,8 @@ export async function refreshApp() {
     );
 
     // 识别页面：已训练模型展示 (允许识别切换，允许重命名和删除)
-    ui.renderModelList(dom.inferenceTrainedList, data.models.trained, 'trained', state.currentModelName, 
-        handleModelSwitch, 
+    ui.renderModelList(dom.inferenceTrainedList, data.models.trained, 'trained', state.currentModelName,
+        handleModelSwitch,
         (name, category) => {
             dom.oldNameHidden.value = name;
             dom.categoryHidden.value = category;
@@ -569,7 +569,7 @@ async function handleDatasetUpload(e) {
     try {
         const res = await api.uploadDataset(file);
         const data = await res.json();
-        
+
         if (res.ok && data.status === 'success') {
             uploadedDatasetPath = data.dataset_path;
             dom.trainDatasetName.innerText = `[就绪] ${file.name}`;
@@ -601,7 +601,7 @@ function collectTrainingParams() {
         warmup_epochs: document.getElementById('p_warmup_epochs').value,
         warmup_momentum: document.getElementById('p_warmup_momentum').value,
         cos_lr: document.getElementById('p_cos_lr').checked,
-        
+
         hsv_h: document.getElementById('p_hsv_h').value,
         hsv_s: document.getElementById('p_hsv_s').value,
         hsv_v: document.getElementById('p_hsv_v').value,
@@ -627,7 +627,7 @@ async function handleStartTraining() {
     const baseModel = dom.trainBaseModel.value;
     const newModelName = dom.trainNewModelName.value.trim();
     const modelDescription = document.getElementById('trainModelDescription').value.trim();
-    
+
     if (!baseModel) return alert("请先选择基础模型！");
     if (!newModelName) return alert("请填写新模型名称！");
     if (!uploadedDatasetPath) return alert("请先上传并成功解析您的训练集 (zip压缩包包括data.yaml)！");
@@ -635,7 +635,7 @@ async function handleStartTraining() {
     const params = collectTrainingParams();
     dom.startTrainBtn.disabled = true;
     dom.startTrainBtn.innerText = '准备工作中...';
-    
+
     // 给后台一些反应时间显示准备中状态
     dom.trainingDashboard.style.display = 'block';
     dom.trainStatusLabel.innerText = "状态: 环境校验与初始化中...";
@@ -643,6 +643,7 @@ async function handleStartTraining() {
     dom.trainProgressFill.style.width = '0%';
     dom.trainEpochLabel.innerText = `0 / ${params.epochs} Epochs`;
 
+    //开始训练
     try {
         const res = await api.startTraining(newModelName, baseModel, uploadedDatasetPath, params, modelDescription);
         const data = await res.json();
@@ -662,15 +663,15 @@ async function handleStartTraining() {
 
 function startTrainingPoller() {
     if (trainingPoller) clearInterval(trainingPoller);
-    
+
     trainingPoller = setInterval(async () => {
         try {
             // 每 2 秒拉取一次训练状态并更新 UI
             const data = await api.getTrainingProgress();
-            
+
             // 如果后端正在训练或刚结束，渲染 Dashboard
             if (data.status === 'training' || data.status === 'success' || data.status === 'error') {
-                if(data.model_name) {
+                if (data.model_name) {
                     dom.trainingDashboard.style.display = 'block';
                     ui.updateTrainingDashboard(data);
                 }

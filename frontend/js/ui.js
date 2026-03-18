@@ -10,8 +10,11 @@ export const ui = {
      * SPA 路由模拟：切换页面容器
      */
     switchPage(pageId, btnElement) {
-        // 隐藏所有容器
-        dom.allContainers.forEach(page => page.style.display = 'none');
+        // 隐藏所有容器并清除动画类
+        dom.allContainers.forEach(page => {
+            page.style.display = 'none';
+            page.classList.remove('page-active');
+        });
         
         // 取消高亮
         dom.topNavBtns.forEach(btn => btn.classList.remove('active'));
@@ -20,6 +23,8 @@ export const ui = {
         const targetPage = document.getElementById(`page-${pageId}`);
         if (targetPage) {
             targetPage.style.display = 'flex';
+            // 稍作延迟或直接添加类以触发 CSS 动画
+            targetPage.classList.add('page-active');
             this.syncSidebarUI(targetPage);
         }
 

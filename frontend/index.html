@@ -206,7 +206,7 @@
                     </div>
 
                     <!-- 第一行：基础模型 + 新模型名 + 模型介绍 -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;">
+                    <div class="training-row">
                         <div class="form-group">
                             <label class="label-primary">🎯 选取基础模型</label>
                             <select id="trainBaseModel" class="form-select"></select>
@@ -214,19 +214,20 @@
                         </div>
                         <div class="form-group">
                             <label class="label-purple">✏️ 新模型名称</label>
-                            <input type="text" id="trainNewModelName" placeholder="例如: pcb_defect_v1" class="form-input">
+                            <input type="text" id="trainNewModelName" placeholder="例如: pcb_defect_v1"
+                                class="form-input">
                             <span style="color: #64748b; font-size: 11px;">训练完成后保存的模型文件名</span>
                         </div>
                         <div class="form-group">
                             <label class="label-success">📝 模型介绍 (选填)</label>
                             <input type="text" id="trainModelDescription" placeholder="例如: 钢材表面缺陷检测模型"
                                 class="form-input">
-                            <span>可在训练详情中查看此介绍</span>
+                            <span style="color: #64748b; font-size: 11px;">可在训练详情中查看此介绍</span>
                         </div>
                     </div>
 
                     <!-- 第二行：数据集上传 + 操作按钮 -->
-                    <div class="dataset-upload-section">
+                    <div class="training-row dataset-upload-section">
                         <div class="form-group">
                             <label class="label-warning">📦 上传训练集 (ZIP压缩包)</label>
                             <div class="dataset-upload-controls">
@@ -235,13 +236,16 @@
                                 <span id="trainDatasetName">未选择</span>
                             </div>
                         </div>
-                         <div>
-                             <button class="btn info" id="btnOpenTrainingParams">⚙️ 调整训练参数</button>
-                         </div>                          
                         <div class="form-group">
+                            <label class="label-primary" style="visibility: hidden;">占位符</label>
+                            <button class="btn info" id="btnOpenTrainingParams">⚙️ 调整训练参数</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="label-primary" style="visibility: hidden;">占位符</label>
                             <button class="btn success" id="startTrainBtn">🚀 开始训练</button>
                         </div>
                     </div>
+
                 </div>
 
                 <!-- 训练进度与监控面板 -->
@@ -297,7 +301,8 @@
             </header>
             <div class="workspace" id="details-workspace">
                 <div id="detailsPlaceholder">
-                    <img src="https://cdn-icons-png.flaticon.com/512/3052/3052825.png" width="100" class="placeholder-icon">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3052/3052825.png" width="100"
+                        class="placeholder-icon">
                     <h2>请从左侧选择一个经过训练的模型来查看详情</h2>
                 </div>
 
@@ -307,7 +312,9 @@
                             <div class="model-name-section">
                                 <div style="display: flex; align-items: center; justify-content: space-between;">
                                     <h2 id="detailsModelName" style="margin: 0;">Model Name</h2>
-                                    <div class="menu-trigger" id="detailsMenuTrigger" style="font-size: 24px; cursor: pointer; padding: 0 10px; color: #94a3b8;">⋮</div>
+                                    <div class="menu-trigger" id="detailsMenuTrigger"
+                                        style="font-size: 24px; cursor: pointer; padding: 0 10px; color: #94a3b8;">⋮
+                                    </div>
                                 </div>
                                 <div id="detailsMenu" class="context-menu" style="right: 20px; top: 60px;">
                                     <div class="context-menu-item" id="detailsRenameBtn">重命名</div>
@@ -387,7 +394,8 @@
     <div id="editDescriptionModal" class="modal hidden">
         <div class="modal-content">
             <h3>修改模型介绍</h3>
-            <textarea id="editDescriptionInput" placeholder="请输入模型介绍..." rows="4" style="width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; padding: 10px; margin: 10px 0; font-family: inherit; resize: vertical;"></textarea>
+            <textarea id="editDescriptionInput" placeholder="请输入模型介绍..." rows="4"
+                style="width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; padding: 10px; margin: 10px 0; font-family: inherit; resize: vertical;"></textarea>
             <input type="hidden" id="descModelNameHidden">
             <div class="modal-actions">
                 <button onclick="closeEditDescriptionModal()">取消</button>
@@ -568,10 +576,9 @@
                         <div class="param-item"><label>Device: <span class="help-text">运行设备(0,
                                     cpu等)留空自动</span></label><input type="text" id="p_device" placeholder="如: 0"
                                 class="form-input"></div>
-                        <div class="param-item" style="display:flex; align-items:center; gap:8px;">
+                        <div class="param-item checkbox-item">
                             <input type="checkbox" id="p_amp" checked style="width: auto;">
-                            <label style="margin:0;">AMP <span class="help-text"
-                                    style="display:inline;">自动混合精度训练</span></label>
+                            <label for="p_amp">AMP: <span class="help-text">自动混合精度训练</span></label>
                         </div>
                     </div>
                 </fieldset>

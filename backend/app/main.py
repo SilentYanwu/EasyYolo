@@ -285,7 +285,7 @@ def start_training(
     base_model: str = Form(...),
     dataset_yaml_path: str = Form(...),
     parameters: str = Form(...), # JSON string
-    description: str = Form("") # 新增：模型介绍，默认为空
+    description: str = Form("") # 模型介绍，选填
 ):
     try:
         params_dict = json.loads(parameters)

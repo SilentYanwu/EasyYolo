@@ -1,0 +1,45 @@
+# PyTorch CUDA 13.0 兼容源
+--extra-index-url https://download.pytorch.org/whl/cu130
+
+# 核心依赖 (特定版本)
+numpy==1.26.4
+opencv-python==4.8.1.78
+
+# PyTorch 生态
+torch
+torchvision
+torchaudio
+
+# YOLO 核心
+ultralytics
+
+# 科学计算与数据处理
+pandas
+scikit-learn
+seaborn
+streamlit
+
+# NLP 与 Transformers
+transformers
+sentencepiece
+accelerate
+
+# 模型部署与导出
+onnxruntime-gpu
+onnxslim
+
+# 开发与调试工具
+jupyter
+notebook
+tensorboard
+tqdm
+h5py
+sacremoses
+
+# 前后端框架与工具
+pydantic
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+gradio
