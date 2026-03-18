@@ -81,7 +81,15 @@ export const dom = {
     detailsTrainingTime: document.getElementById('detailsTrainingTime'),
     detailsParamsTable: document.getElementById('detailsParamsTable'),
     detailsChartsGrid: document.getElementById('detailsChartsGrid'),
-    detailsModelDescription: document.getElementById('detailsModelDescription')
+    detailsModelDescription: document.getElementById('detailsModelDescription'),
+    detailsMenuTrigger: document.getElementById('detailsMenuTrigger'),
+    detailsMenu: document.getElementById('detailsMenu'),
+    detailsRenameBtn: document.getElementById('detailsRenameBtn'),
+    detailsEditDescBtn: document.getElementById('detailsEditDescBtn'),
+    detailsDeleteBtn: document.getElementById('detailsDeleteBtn'),
+    editDescriptionModal: document.getElementById('editDescriptionModal'),
+    editDescriptionInput: document.getElementById('editDescriptionInput'),
+    descModelNameHidden: document.getElementById('descModelNameHidden')
 };
 
 /**

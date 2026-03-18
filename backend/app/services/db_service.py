@@ -257,16 +257,37 @@ class DBService:
             db.close()
 
     def update_training_record_name(self, old_name: str, new_name: str):
-        """级联重命名一个模型的训练记录细节"""
+        """级联重命名一个模型的训练记录细节，及其作为基础模型的情况"""
         db = self._get_db()
         try:
+            # 1. 更新该模型自身的记录名
             db.query(TrainingHistory).\
                 filter(TrainingHistory.model_name == old_name).\
                 update({"model_name": new_name})
+            
+            # 2. 更新其他记录中将其作为 base_model 的字段 (级联更新)
+            db.query(TrainingHistory).\
+                filter(TrainingHistory.base_model == old_name).\
+                update({"base_model": new_name})
+                
             db.commit()
         except Exception as e:
             db.rollback()
             print(f"Error updating training record name: {e}")
+        finally:
+            db.close()
+
+    def update_training_record_description(self, model_name: str, description: str):
+        """更新模型介绍"""
+        db = self._get_db()
+        try:
+            db.query(TrainingHistory).\
+                filter(TrainingHistory.model_name == model_name).\
+                update({"description": description})
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error updating description: {e}")
         finally:
             db.close()
 

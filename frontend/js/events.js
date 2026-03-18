@@ -137,6 +137,51 @@ export function bindEvents() {
             await refreshApp();
         }
     };
+
+    // 11. 模型详情页管理菜单事件
+    dom.detailsMenuTrigger.onclick = (e) => {
+        e.stopPropagation();
+        ui.toggleMenu('detailsMenu');
+    };
+
+    dom.detailsRenameBtn.onclick = () => {
+        const name = state.currentDetailsModelName;
+        if (!name) return;
+        dom.oldNameHidden.value = name;
+        dom.categoryHidden.value = 'trained'; // 详情页目前只展示 trained 模型
+        dom.renameInput.value = name.replace('.pt', '');
+        dom.renameModal.classList.remove('hidden');
+        setTimeout(() => dom.renameInput.focus(), 100);
+    };
+
+    dom.detailsEditDescBtn.onclick = () => {
+        const name = state.currentDetailsModelName;
+        openEditDescriptionModal(name);
+    };
+
+    window.openEditDescriptionModal = openEditDescriptionModal; // 暴露给 HTML 或其他模块
+
+
+    dom.detailsDeleteBtn.onclick = () => {
+        const name = state.currentDetailsModelName;
+        if (!name) return;
+        openDeleteModal(name, 'trained');
+    };
+
+    window.closeEditDescriptionModal = () => dom.editDescriptionModal.classList.add('hidden');
+    window.confirmEditDescription = async () => {
+        const name = dom.descModelNameHidden.value;
+        const desc = dom.editDescriptionInput.value.trim();
+        try {
+            const res = await api.updateModelDescription(name, desc);
+            if (res.ok) {
+                window.closeEditDescriptionModal();
+                await loadModelDetails(name); // 重新加载详情以显示新介绍
+            } else {
+                alert('修改失败');
+            }
+        } catch (e) { alert('请求出错'); }
+    };
 }
 /**
  * 业务处理器：单张预测
@@ -293,10 +338,26 @@ function openDeleteModal(modelName, category) {
     dom.deleteModal.classList.remove('hidden');
     // 设置焦点到取消按钮
     setTimeout(() => {
-        const cancelBtn = dom.deleteModal.querySelector('.modal-actions button:first-child');
-        if (cancelBtn) cancelBtn.focus();
+        const btn = dom.deleteModal.querySelector('.btn.primary') || dom.deleteModal.querySelector('button');
+        if (btn) btn.focus();
     }, 100);
 }
+
+function openEditDescriptionModal(name) {
+    if (!name) return;
+    dom.descModelNameHidden.value = name;
+    
+    // 如果是当前详情页的模型，可以从 UI 取初值
+    let currentDesc = '';
+    if (name === state.currentDetailsModelName) {
+        currentDesc = dom.detailsModelDescription.innerText.replace('📝 ', '').replace('暂无介绍', '');
+    }
+    
+    dom.editDescriptionInput.value = currentDesc;
+    dom.editDescriptionModal.classList.remove('hidden');
+    setTimeout(() => dom.editDescriptionInput.focus(), 100);
+}
+
 
 async function handleModelDelete() {
     const modelName = dom.deleteModelNameHidden.value;
@@ -377,11 +438,10 @@ export async function refreshApp() {
             dom.categoryHidden.value = category;
             dom.renameInput.value = name.replace('.pt', '');
             dom.renameModal.classList.remove('hidden');
-            setTimeout(() => {
-                if (dom.renameInput) dom.renameInput.focus();
-            }, 100);
+            setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
         }, 
-        (name, category) => openDeleteModal(name, category)
+        (name, category) => openDeleteModal(name, category),
+        (name) => openEditDescriptionModal(name)
     );
     
     // 详情页面：已训练模型展示 (允许重命名和删除，点击加载详情)
@@ -399,7 +459,8 @@ export async function refreshApp() {
             dom.renameModal.classList.remove('hidden');
             setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
         },
-        (name, category) => openDeleteModal(name, category)
+        (name, category) => openDeleteModal(name, category),
+        (name) => openEditDescriptionModal(name)
     );
 
     // 识别页面：已训练模型展示 (允许识别切换，允许重命名和删除)
@@ -412,8 +473,10 @@ export async function refreshApp() {
             dom.renameModal.classList.remove('hidden');
             setTimeout(() => { if (dom.renameInput) dom.renameInput.focus(); }, 100);
         },
-        (name, category) => openDeleteModal(name, category)
+        (name, category) => openDeleteModal(name, category),
+        (name) => openEditDescriptionModal(name)
     );
+
 
     // 给训练页面的基础模型下拉列表赋值
     ui.renderTrainBaseModels(data.models);

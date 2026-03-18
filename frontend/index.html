@@ -305,7 +305,15 @@
                     <div class="model-info-card">
                         <div class="model-info-header">
                             <div class="model-name-section">
-                                <h2 id="detailsModelName">Model Name</h2>
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <h2 id="detailsModelName" style="margin: 0;">Model Name</h2>
+                                    <div class="menu-trigger" id="detailsMenuTrigger" style="font-size: 24px; cursor: pointer; padding: 0 10px; color: #94a3b8;">⋮</div>
+                                </div>
+                                <div id="detailsMenu" class="context-menu" style="right: 20px; top: 60px;">
+                                    <div class="context-menu-item" id="detailsRenameBtn">重命名</div>
+                                    <div class="context-menu-item" id="detailsEditDescBtn">修改介绍</div>
+                                    <div class="context-menu-item danger" id="detailsDeleteBtn">删除模型</div>
+                                </div>
                                 <div class="model-dataset" id="detailsDatasetName">--</div>
                             </div>
                             <div class="model-desc-section">
@@ -371,6 +379,19 @@
             <div class="modal-actions">
                 <button onclick="closeRenameModal()">取消</button>
                 <button onclick="confirmRename()" class="btn primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改介绍模态框 -->
+    <div id="editDescriptionModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>修改模型介绍</h3>
+            <textarea id="editDescriptionInput" placeholder="请输入模型介绍..." rows="4" style="width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; padding: 10px; margin: 10px 0; font-family: inherit; resize: vertical;"></textarea>
+            <input type="hidden" id="descModelNameHidden">
+            <div class="modal-actions">
+                <button onclick="closeEditDescriptionModal()">取消</button>
+                <button onclick="confirmEditDescription()" class="btn primary">确定</button>
             </div>
         </div>
     </div>

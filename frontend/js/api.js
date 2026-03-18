@@ -147,5 +147,19 @@ export const api = {
     async getTrainingHistory(modelName) {
         const res = await fetch(`${API_BASE}/training_history/${modelName}`);
         return await res.json();
+    },
+
+    /**
+     * 更新模型介绍
+     */
+    async updateModelDescription(modelName, description) {
+        return await fetch(`${API_BASE}/update_model_description`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model_name: modelName,
+                description: description
+            })
+        });
     }
 };

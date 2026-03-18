@@ -36,8 +36,9 @@ export const ui = {
      * @param {Function} onSwitch 切换回调
      * @param {Function} onRename 重命名回调
      * @param {Function} onDelete 删除回调
+     * @param {Function} onEditDesc 修改介绍回调
      */
-    renderModelList(container, items, category, activeName, onSwitch, onRename, onDelete) {
+    renderModelList(container, items, category, activeName, onSwitch, onRename, onDelete, onEditDesc) {
         container.innerHTML = '';
         items.forEach((name, index) => {
             const div = document.createElement('div');
@@ -64,12 +65,14 @@ export const ui = {
                 menu.id = menuId;
                 menu.innerHTML = `
                     <div class="context-menu-item">重命名</div>
-                    <div class="context-menu-item danger">删除</div>
+                    <div class="context-menu-item">修改介绍</div>
+                    <div class="context-menu-item danger">删除模型</div>
                 `;
 
                 const menuItems = menu.querySelectorAll('.context-menu-item');
                 menuItems[0].onclick = (e) => { e.stopPropagation(); onRename(name, category); };
-                menuItems[1].onclick = (e) => { e.stopPropagation(); onDelete(name, category); };
+                menuItems[1].onclick = (e) => { e.stopPropagation(); onEditDesc(name, category); };
+                menuItems[2].onclick = (e) => { e.stopPropagation(); onDelete(name, category); };
 
                 div.appendChild(dots);
                 div.appendChild(menu);
@@ -262,6 +265,7 @@ export const ui = {
 
         dom.detailsPlaceholder.style.display = 'none';
         dom.detailsContent.style.display = 'flex';
+        dom.detailsMenuTrigger.style.visibility = 'visible'; // 确保菜单触发器可见
 
         dom.detailsModelName.innerText = detailsData.model_name;
         dom.detailsDatasetName.innerText = detailsData.dataset || '--';

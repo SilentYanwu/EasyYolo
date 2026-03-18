@@ -136,6 +136,18 @@ def rename_model(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/update_model_description")
+def update_model_description(
+    model_name: str = Body(...),
+    description: str = Body(...)
+):
+    """更新模型介绍"""
+    try:
+        db_service.update_training_record_description(model_name, description)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/delete_model")
 def delete_model(model_name: str, category: str):
     """删除模型文件"""
