@@ -51,7 +51,7 @@ export const ui = {
             div.appendChild(nameSpan);
 
             if (category !== 'raw') {
-                const menuId = `menu-${category}-${index}`;
+                const menuId = `menu-${container.id}-${category}-${index}`;
                 const dots = document.createElement('div');
                 dots.className = 'menu-trigger';
                 dots.innerText = '⋮';
