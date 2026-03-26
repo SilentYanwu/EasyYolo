@@ -98,11 +98,11 @@ async def batch_predict_generator(
     total = len(files)
     queue: asyncio.Queue[UploadFile] = asyncio.Queue()
 
-    # --- 生产者：将所有文件放入队列 ---
+    # 生产者：将所有文件放入队列
     for file in files:
         await queue.put(file)
 
-    # --- 消费者：逐个取出处理 ---
+    # 消费者：逐个取出处理
     for i in range(1, total + 1):
         file = await queue.get()
 
@@ -130,6 +130,7 @@ async def batch_predict_generator(
                 "result_url": result["result_url"],
             }
             yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+            # 处理单个文件的结果，在循环中多次执行
 
         except Exception as e:
             # SSE 事件：单张失败，不中断批次
@@ -144,7 +145,7 @@ async def batch_predict_generator(
         finally:
             queue.task_done()
 
-    # SSE 事件：全部完成
+    # SSE 事件：全部完成，通知前端
     yield f"data: {json.dumps({'done': True, 'total': total})}\n\n"
 
 
@@ -173,7 +174,7 @@ async def video_predict_generator(file: UploadFile, model_name: str, conf: float
         
         for current, total in yolo_service.predict_video_stream(file_path, result_path, conf):
             percent = int((current / total) * 100) if total > 0 else 0
-            # ...
+            # SSE 事件：进度更新
             event_data = {
                 "current_frame": current,
                 "total_frames": total,
@@ -181,8 +182,8 @@ async def video_predict_generator(file: UploadFile, model_name: str, conf: float
                 "status": "processing"
             }
             yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
-            # 稍微停顿一下，让事件能发出去（可选）
-            await asyncio.sleep(0.01)
+            # 稍微停顿一下，让事件能发出去，给前端机会更新 UI
+            await asyncio.sleep(0.02)
 
         # 3. 处理完成后存入数据库
         db_service.add_record(

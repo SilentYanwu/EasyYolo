@@ -52,7 +52,7 @@ export const dom = {
     // 所有页面容器
     allContainers: document.querySelectorAll('.app-container'),
 
-    // --- 新增：YOLO训练页面相关 ---
+    // YOLO训练页面相关
     trainBaseModel: document.getElementById('trainBaseModel'),
     trainNewModelName: document.getElementById('trainNewModelName'),
     trainDatasetInput: document.getElementById('trainDatasetInput'),
@@ -61,7 +61,7 @@ export const dom = {
     btnOpenTrainingParams: document.getElementById('btnOpenTrainingParams'),
     startTrainBtn: document.getElementById('startTrainBtn'),
     
-    // --- 新增：训练进度监控 ---
+    // 训练进度监控
     trainingDashboard: document.getElementById('trainingDashboard'),
     trainStatusLabel: document.getElementById('trainStatusLabel'),
     trainEtaLabel: document.getElementById('trainEtaLabel'),
@@ -69,10 +69,10 @@ export const dom = {
     trainEpochLabel: document.getElementById('trainEpochLabel'),
     trainMetricsGrid: document.getElementById('trainMetricsGrid'),
 
-    // --- 新增：训练参数模态框 ---
+    // 训练参数模态框
     trainingParamsModal: document.getElementById('trainingParamsModal'),
 
-    // --- 新增：模型详情页面相关 ---
+    // 模型详情页面相关
     detailsPlaceholder: document.getElementById('detailsPlaceholder'),
     detailsContent: document.getElementById('detailsContent'),
     detailsModelName: document.getElementById('detailsModelName'),

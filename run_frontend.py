@@ -49,10 +49,13 @@ def run_server():
     webbrowser.open(f"http://localhost:{port}")
 
     try:
+        print("\n提示: 按 Ctrl+C 可停止服务器")
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 服务器已停止")
+        print("\n\n🛑 正在停止服务器...")
+        httpd.shutdown()
         httpd.server_close()
+        print("✅ 服务器已成功停止")
         sys.exit(0)
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ export function bindEvents() {
     // 1. 顶部导航切换 (已通过 HTML 的 onclick="switchPage" 绑定，此处暴露接口即可)
     window.switchPage = (pageId, btn) => ui.switchPage(pageId, btn);
 
-    // 2. 图片选择监听
+    // 2. “上传图片”按钮的监听
     dom.imageInput.onchange = (e) => {
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
@@ -35,7 +35,7 @@ export function bindEvents() {
         dom.predictBtn.disabled = false;
     };
 
-    // 3. 视频选择监听
+    // 3. “上传视频”按钮的监听
     dom.videoInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -46,7 +46,7 @@ export function bindEvents() {
         dom.statusText.innerText = '视频已就绪';
     };
 
-    // 4. 开始识别点击
+    // 4. “开始识别”按钮的监听, 根据文件类型调用不同的处理函数
     dom.predictBtn.onclick = async () => {
         if (selectedFiles.length === 0) return;
         const isVideo = selectedFiles[0].type.startsWith('video/');
@@ -87,6 +87,7 @@ export function bindEvents() {
             if (fileInput) fileInput.focus();
         }, 100);
     };
+
     window.closeUploadModal = () => dom.uploadModal.classList.add('hidden');
     window.closeRenameModal = () => dom.renameModal.classList.add('hidden');
     window.closeDeleteModal = () => dom.deleteModal.classList.add('hidden');
@@ -100,7 +101,6 @@ export function bindEvents() {
     window.confirmDeleteHistory = handleDeleteHistoryItem;
     window.clearHistory = handleClearHistory;
 
-    // --- 新增：YOLO训练相关的弹窗与事件映射 ---
     window.openTrainingParamsModal = () => {
         dom.trainingParamsModal.classList.remove('hidden');
     };
@@ -222,6 +222,8 @@ async function handleBatchPredict(files) {
                 const line = part.trim();
                 if (!line.startsWith('data: ')) continue;
                 const event = JSON.parse(line.slice(6));
+
+                // 完成，更新进度和显示结果
                 if (event.done) {
                     ui.updateProgress(event.total, event.total, '批量识别完成');
                 } else {
@@ -301,7 +303,7 @@ function resetDisplay(isVideo) {
 export async function handleModelSwitch(name, category) {
     if (name === state.currentModelName) return;
     try {
-        const res = await api.switchModel(name, category);
+        const res = await api.switchModel(name, category); //等待模型切换完成后再刷新界面
         if (res.ok) {
             state.currentModelName = name;
             state.currentCategory = category;
@@ -484,6 +486,9 @@ export async function refreshApp() {
     refreshHistory();
 }
 
+/** * 
+ * 刷新历史记录列表
+ * */
 async function refreshHistory() {
     const history = await api.getHistory(state.currentModelName);
     ui.renderHistory(history, handleViewHistory, (id) => {
