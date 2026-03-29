@@ -181,9 +181,11 @@ async def video_predict_generator(file: UploadFile, model_name: str, conf: float
                 "percent": percent,
                 "status": "processing"
             }
-            yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+
             # 稍微停顿一下，让事件能发出去，给前端机会更新 UI
             await asyncio.sleep(0.02)
+            yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+
 
         # 3. 处理完成后存入数据库
         db_service.add_record(

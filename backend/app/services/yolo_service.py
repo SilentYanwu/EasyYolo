@@ -138,7 +138,7 @@ class YoloService:
                 frame_count += 1
                 annotated_frame = result.plot()
                 out.write(annotated_frame)
-                
+                # 每处理5帧或最后一帧，yield 进度
                 if frame_count % 5 == 0 or frame_count == total_frames:
                     yield frame_count, total_frames
 

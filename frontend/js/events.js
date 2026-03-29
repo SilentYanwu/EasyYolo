@@ -395,6 +395,9 @@ function handleViewHistory(res, ori) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/*
+* 业务：清空历史记录
+*/
 async function handleClearHistory() {
     dom.clearHistoryModal.classList.remove('hidden');
     setTimeout(() => {
@@ -411,6 +414,9 @@ async function confirmClearHistoryAction() {
     } catch (e) { alert('清空失败'); }
 }
 
+/**
+ * 业务：删除单条历史记录
+ */
 async function handleDeleteHistoryItem() {
     const recordId = dom.deleteHistoryIdHidden.value;
     try {

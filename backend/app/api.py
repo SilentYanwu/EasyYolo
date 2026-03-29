@@ -189,6 +189,7 @@ def clear_history_api(model_name: str):
     db_service.clear_history(model_name)
     return {"status": "all cleared"}
 
+
 @app.delete("/history/{record_id}")
 def delete_single_history(record_id: int):
     """删除单条历史记录"""
