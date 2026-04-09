@@ -207,7 +207,7 @@ export const ui = {
         dom.allContainers.forEach(container => this.syncSidebarUI(container));
     },
 
-    // --- 新增：YOLO训练UI逻辑 ---
+    // YOLO训练UI逻辑 ---
     /**
      * 渲染训练界面的基础模型下拉列表
      */
@@ -359,14 +359,18 @@ export const ui = {
             'PR_curve.png': 'PR 曲线：展示精确度(Precision)与召回率(Recall)的权衡关系，曲线下面积(AP)越大表示模型越优秀。',
             'P_curve.png': 'Precision 曲线：展示不同置信度阈值下精确度的变化，高精确度意味着误检率低。',
             'R_curve.png': 'Recall 曲线：展示不同置信度阈值下召回率的变化，高召回率意味着漏检率低。',
+            'BoxF1_curve.png': '边界框 F1 曲线：展示不同置信度阈值下的 F1 分数变化（YOLOv8/11格式）。',
+            'BoxPR_curve.png': '边界框 PR 曲线：展示精确度与召回率的权衡关系（YOLOv8/11格式）。',
+            'BoxP_curve.png': '边界框 Precision 曲线：展示不同置信度阈值下精确度的变化（YOLOv8/11格式）。',
+            'BoxR_curve.png': '边界框 Recall 曲线：展示不同置信度阈值下召回率的变化（YOLOv8/11格式）。',
             'labels.jpg': '标签分布：展示数据集中各类别标注的数量和位置分布统计，帮助评估数据集是否均衡。',
             'labels_correlogram.jpg': '标签相关性：展示标注框的宽度、高度、位置等属性之间的相关性分布，用于分析数据集标注的几何特征。'
         };
 
-        // 关键修复：chart 文件夹名是不带 .pt 的！
+        // chart 文件夹名是不带 .pt 的！
         const chartModelName = detailsData.model_name.replace('.pt', '');
 
-        const charts = ['results.png', 'confusion_matrix.png', 'confusion_matrix_normalized.png', 'F1_curve.png', 'PR_curve.png', 'P_curve.png', 'R_curve.png', 'labels.jpg', 'labels_correlogram.jpg'];
+        const charts = ['results.png', 'confusion_matrix.png', 'confusion_matrix_normalized.png', 'F1_curve.png', 'PR_curve.png', 'P_curve.png', 'R_curve.png', 'BoxF1_curve.png', 'BoxPR_curve.png', 'BoxP_curve.png', 'BoxR_curve.png', 'labels.jpg', 'labels_correlogram.jpg'];
         charts.forEach(chartName => {
             const imgUrl = `${API_BASE}/trainchart/${chartModelName}/${chartName}?t=${new Date().getTime()}`;
             const wrapper = document.createElement('div');

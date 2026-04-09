@@ -1,5 +1,5 @@
 import uvicorn
-from api import app
+from backend.app.api import app
 
 if __name__ == "__main__":
     # 启动 FastAPI 服务

@@ -4,7 +4,8 @@ import shutil
 import torch
 import gc
 from ultralytics import YOLO
-from core.config import settings
+
+from backend.app.core.config import settings
 
 class YoloService:
     def __init__(self):

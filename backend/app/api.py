@@ -6,14 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from fastapi import Body, Form
+import json
 
 # 引入配置和业务服务
-from core.config import settings
-from services.yolo_service import yolo_service
-from services.db_service import db_service
-from services.inference_service import batch_predict_generator, handle_single_predict, video_predict_generator
-from services.training_service import training_service
-import json
+from backend.app.core.config import settings
+from backend.app.services.yolo_service import yolo_service
+from backend.app.services.db_service import db_service
+from backend.app.services.inference_service import batch_predict_generator, handle_single_predict, video_predict_generator
+from backend.app.services.training_service import training_service
+
 
 current_model_name = settings.DEFAULT_MODEL_NAME # 当前模型名称
 app = FastAPI(title="YOLOv11 Web System")

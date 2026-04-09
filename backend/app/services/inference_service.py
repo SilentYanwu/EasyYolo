@@ -1,12 +1,3 @@
-"""
-inference_service.py — 识别流程封装服务
-
-职责：
-1.识别单张图片
-2.识别多张图片
-
-"""
-
 import os
 import json
 import shutil
@@ -14,9 +5,9 @@ import asyncio
 from datetime import datetime
 from fastapi import UploadFile
 
-from core.config import settings
-from services.yolo_service import yolo_service
-from services.db_service import db_service
+from backend.app.core.config import settings
+from backend.app.services.yolo_service import yolo_service
+from backend.app.services.db_service import db_service
 
 
 async def save_upload_file(file: UploadFile) -> tuple[str, str]:

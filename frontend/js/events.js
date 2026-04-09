@@ -8,6 +8,10 @@ import { api } from './api.js';
 
 let selectedFiles = [];
 
+/**
+ * 绑定页面所有事件处理函数
+ * 包括导航切换、文件上传、识别处理、视频控制、弹窗管理等功能
+ */
 export function bindEvents() {
     // 1. 顶部导航切换 (已通过 HTML 的 onclick="switchPage" 绑定，此处暴露接口即可)
     window.switchPage = (pageId, btn) => ui.switchPage(pageId, btn);
@@ -114,6 +118,7 @@ export function bindEvents() {
     };
     window.startTraining = handleStartTraining;
 
+    // 9. 训练页面：数据集上传按钮和文件选择
     dom.uploadDatasetBtn.onclick = () => dom.trainDatasetInput.click();
     dom.trainDatasetInput.onchange = handleDatasetUpload;
 
@@ -124,10 +129,10 @@ export function bindEvents() {
     // 启动训练轮询
     startTrainingPoller();
 
-    // 9. 模态框优化：ESC键关闭和点击背景关闭
+    // 10. 模态框优化：ESC键关闭和点击背景关闭
     setupModalOptimizations();
 
-    // 10. 绑定模型详情页的基础模型跳转点击事件
+    // 11. 绑定模型详情页的基础模型跳转点击事件
     dom.detailsBaseModelLink.onclick = async (e) => {
         e.preventDefault();
         const targetModel = e.target.dataset.target;
@@ -138,7 +143,7 @@ export function bindEvents() {
         }
     };
 
-    // 11. 模型详情页管理菜单事件
+    // 12. 模型详情页管理菜单事件
     dom.detailsMenuTrigger.onclick = (e) => {
         e.stopPropagation();
         ui.toggleMenu('detailsMenu');
@@ -570,6 +575,7 @@ function setupModalOptimizations() {
 let uploadedDatasetPath = "";
 let trainingPoller = null;
 
+// 处理训练集上传
 async function handleDatasetUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -598,6 +604,7 @@ async function handleDatasetUpload(e) {
     }
 }
 
+// 收集训练参数
 function collectTrainingParams() {
     return {
         epochs: document.getElementById('p_epochs').value,
@@ -634,6 +641,7 @@ function collectTrainingParams() {
     };
 }
 
+// 处理开始训练
 async function handleStartTraining() {
     const baseModel = dom.trainBaseModel.value;
     const newModelName = dom.trainNewModelName.value.trim();
@@ -672,6 +680,7 @@ async function handleStartTraining() {
     }
 }
 
+// 启动训练状态轮询器
 function startTrainingPoller() {
     if (trainingPoller) clearInterval(trainingPoller);
 
@@ -688,7 +697,7 @@ function startTrainingPoller() {
                 }
             }
 
-            // --- 新增：检测训练完成并弹出通知 ---
+            // 检测训练完成并弹出通知
             if (state.lastTrainingStatus === 'training' && data.status === 'success') {
                 state.lastTrainingStatus = 'success';
                 alert(`🎉 训练完成！新模型 "${data.model_name}" 已就绪。\n点击确认后将刷新页面以加载最新数据。`);

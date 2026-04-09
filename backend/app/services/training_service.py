@@ -9,8 +9,9 @@ import torch
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
 from ultralytics import YOLO
-from core.config import settings
-from services.db_service import db_service
+
+from backend.app.core.config import settings
+from backend.app.services.db_service import db_service
 
 # 全局训练状态单例 (只允许同时跑一个训练任务)
 training_state = {
@@ -57,7 +58,7 @@ class TrainingService:
             os.remove(zip_path)
 
             # 3. 寻找 data.yaml
-            # 可能是 datasets/coco/data.yaml，也可能是 datasets/coco/coco/data.yaml (如果带了外层文件夹)
+            # 可能是 datasets/coco/data.yaml，也可能是 datasets/coco/coco/data.yaml
             data_yaml = None
             for root, dirs, files in os.walk(dataset_path):
                 if "data.yaml" in files:
@@ -69,7 +70,7 @@ class TrainingService:
                 shutil.rmtree(dataset_path, ignore_errors=True)
                 raise HTTPException(status_code=400, detail="未找到 data.yaml！请确保压缩包格式正确且为有效的 YOLO 数据集。")
             
-            # 返回实际包含 data.yaml 的相对于 DATASETS_DIR 的路径 (或者直接返回绝对路径)
+            # 返回实际包含 data.yaml 的相对于 DATASETS_DIR 的路径
             # 为了后续训练方便，直接使用包含 data.yaml 的绝对目录
             actual_dataset_dir = os.path.dirname(data_yaml)
             return actual_dataset_dir.replace("\\", "/")
@@ -106,11 +107,13 @@ class TrainingService:
             args=(model_name, base_model, dataset_yaml_path, params, description)
         )
         t.start()
+        # 立即返回响应，前端可以通过 /training_progress 接口轮询获取训练状态
         return {"status": "success", "message": "训练任务已启动"}
 
     def _run_yolo_training(self, model_name: str, base_model: str, dataset_yaml_path: str, params: dict, description: str):
+        
         # 导入推理服务单例 (延迟导入避免循环引用)
-        from services.yolo_service import yolo_service
+        from backend.app.services.yolo_service import yolo_service
 
         # 0. 先释放推理模型占用的 GPU 显存，否则双模型会 OOM
         saved_model_name = yolo_service._current_model_name
@@ -190,9 +193,10 @@ class TrainingService:
                 "project": project_dir,
                 "name": model_name,
                 "exist_ok": True,
+                "plots": True,  # 强制生成所有图表 (F1/P/R/PR 曲线 + labels_correlogram)
             }
             # 合并用户参数 (params里的字典解包)
-            # 要确保 params 类型正确，比如 epochs 必须是 int，否则 YOLO 验证会报错!
+            # 要确保 params 类型正确
             # 过滤掉无法序列化或无意义的选项
             for key in list(params.keys()):
                 if params[key] == "":
@@ -242,7 +246,9 @@ class TrainingService:
 
             charts_to_copy = [
                 "results.png", "confusion_matrix.png", "confusion_matrix_normalized.png",
-                "F1_curve.png", "P_curve.png", "PR_curve.png", "R_curve.png"
+                "F1_curve.png", "P_curve.png", "PR_curve.png", "R_curve.png",
+                "BoxF1_curve.png", "BoxP_curve.png", "BoxPR_curve.png", "BoxR_curve.png",
+                "labels.jpg", "labels_correlogram.jpg"
             ]
             for chart in charts_to_copy:
                 src_chart = os.path.join(run_dir, chart)
@@ -275,14 +281,16 @@ class TrainingService:
             traceback.print_exc()
             training_state["status"] = "error"
             training_state["error_msg"] = str(e)
+            training_state["eta"] = "训练错误"
+
+        # 5. 最后执行的代码块
         finally:
-            # 无论成功还是失败，都要：
-            # 1. 释放训练模型的 GPU 显存
+            # A. 释放训练模型的 GPU 显存
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-            # 2. 重新加载之前的推理模型
+            # B. 重新加载之前的推理模型
             try:
                 if saved_model_name and saved_category:
                     yolo_service.load_model(saved_model_name, saved_category)
