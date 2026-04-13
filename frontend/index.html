@@ -208,18 +208,18 @@
                     <!-- 第一行：基础模型 + 新模型名 + 模型介绍 -->
                     <div class="training-row">
                         <div class="form-group">
-                            <label class="label-primary">🎯 选取基础模型</label>
+                            <label class="label-primary">选取基础模型</label>
                             <select id="trainBaseModel" class="form-select"></select>
                             <span style="color: #64748b; font-size: 11px;">选择预训练的 YOLO 模型作为训练起点</span>
                         </div>
                         <div class="form-group">
-                            <label class="label-purple">✏️ 新模型名称</label>
+                            <label class="label-purple">新模型名称</label>
                             <input type="text" id="trainNewModelName" placeholder="例如: pcb_defect_v1"
                                 class="form-input">
                             <span style="color: #64748b; font-size: 11px;">训练完成后保存的模型文件名</span>
                         </div>
                         <div class="form-group">
-                            <label class="label-success">📝 模型介绍 (选填)</label>
+                            <label class="label-success">模型介绍 (选填)</label>
                             <input type="text" id="trainModelDescription" placeholder="例如: 钢材表面缺陷检测模型"
                                 class="form-input">
                             <span style="color: #64748b; font-size: 11px;">可在训练详情中查看此介绍</span>
@@ -229,10 +229,10 @@
                     <!-- 第二行：数据集上传 + 操作按钮 -->
                     <div class="training-row dataset-upload-section">
                         <div class="form-group">
-                            <label class="label-warning">📦 上传训练集 (ZIP压缩包)</label>
+                            <label class="label-warning"> 请使用ZIP压缩包</label>
                             <div class="dataset-upload-controls">
                                 <input type="file" id="trainDatasetInput" accept=".zip" hidden>
-                                <button class="btn info" id="uploadDatasetBtn">上传数据集</button>
+                                <button class="btn info" id="uploadDatasetBtn">📦 上传数据集</button>
                                 <span id="trainDatasetName">未选择</span>
                             </div>
                         </div>
@@ -336,7 +336,7 @@
                             </div>
                         </div>
 
-                        <h3>📋 训练超参数</h3>
+                        <h3>训练超参数</h3>
                         <div class="params-table-container">
                             <table class="params-table">
                                 <thead>
@@ -350,6 +350,13 @@
                                     <!-- 动态插入参数 -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <div class="final-metrics-section" id="finalMetricsSection" style="display: none;">
+                        <h3>训练最终指标</h3>
+                        <div id="detailsFinalMetricsGrid" class="metrics-grid">
+                            <!-- 动态插入最终指标卡片 -->
                         </div>
                     </div>
 

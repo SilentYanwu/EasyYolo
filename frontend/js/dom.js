@@ -89,7 +89,11 @@ export const dom = {
     detailsDeleteBtn: document.getElementById('detailsDeleteBtn'),
     editDescriptionModal: document.getElementById('editDescriptionModal'),
     editDescriptionInput: document.getElementById('editDescriptionInput'),
-    descModelNameHidden: document.getElementById('descModelNameHidden')
+    descModelNameHidden: document.getElementById('descModelNameHidden'),
+
+    // 最终训练指标面板
+    finalMetricsSection: document.getElementById('finalMetricsSection'),
+    detailsFinalMetricsGrid: document.getElementById('detailsFinalMetricsGrid')
 };
 
 /**

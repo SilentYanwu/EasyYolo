@@ -259,12 +259,16 @@ class TrainingService:
             # dataset 可能只是个 yaml 路径字符串，前端发过来的是纯名字或带 data.yaml，这里保留纯名字
             dataset_name_clean = os.path.basename(dataset_yaml_path)
             
+            # 将最后一轮的训练指标序列化为 JSON 存入数据库
+            final_metrics_json = json.dumps(training_state.get("metrics", {}), ensure_ascii=False)
+
             db_service.add_training_record(
                 model_name=final_model_filename,
                 base_model=base_model,
                 dataset=dataset_name_clean,
                 parameters=json.dumps(params, ensure_ascii=False),
-                description=description
+                description=description,
+                final_metrics=final_metrics_json
             )
 
             # D. 清理临时 runs 目录 (因为我们已经把产物迁移到了 models/trained 和 trainchart 里)

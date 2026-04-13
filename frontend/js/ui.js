@@ -5,6 +5,17 @@ import { dom } from './dom.js';
 import { state } from './state.js';
 import { MAX_THUMBNAILS, API_BASE } from './config.js';
 
+// 训练指标含义说明字典 (监控面板和详情页共用)
+const metricDescriptions = {
+    "mAP50": "平均精度(IoU=0.50)：衡量模型在 50% 重叠阈值下的整体检测准确度，越接近 1 越好",
+    "mAP50-95": "平均精度(IoU=0.50:0.95)：在多个 IoU 阈值下的综合评估，是最严格的检测性能指标",
+    "Precision": "精确率：预测为正样本中实际为正样本的比例，越高说明误报越少",
+    "Recall": "召回率：实际正样本中被正确检测到的比例，越高说明漏检越少",
+    "Box Loss": "边界框回归损失：衡量预测框与真实框的位置偏差，训练中应持续降低",
+    "Cls Loss": "分类损失：衡量目标类别预测的准确性，训练中应持续降低",
+    "Dfl Loss": "分布焦点损失：YOLO11 特有的边界框精细化损失，辅助提升定位精度"
+};
+
 export const ui = {
     /**
      * SPA 路由模拟：切换页面容器
@@ -15,7 +26,7 @@ export const ui = {
             page.style.display = 'none';
             page.classList.remove('page-active');
         });
-        
+
         // 取消高亮
         dom.topNavBtns.forEach(btn => btn.classList.remove('active'));
 
@@ -28,8 +39,26 @@ export const ui = {
             this.syncSidebarUI(targetPage);
         }
 
-        // 高亮按钮
-        if (btnElement) btnElement.classList.add('active');
+        // 高亮按钮：优先用传入的元素，否则按 data-page 查找
+        if (btnElement) {
+            btnElement.classList.add('active');
+        } else {
+            const matchBtn = document.querySelector(`.top-nav-btn[data-page="${pageId}"]`);
+            if (matchBtn) matchBtn.classList.add('active');
+        }
+
+        // 持久化当前页面到 localStorage，刷新后可自动恢复
+        localStorage.setItem('activePage', pageId);
+    },
+
+    /**
+     * 页面初始化时恢复刷新前的页面
+     */
+    restorePage() {
+        const savedPage = localStorage.getItem('activePage');
+        if (savedPage && savedPage !== 'inference') {
+            this.switchPage(savedPage, null);
+        }
     },
 
     /**
@@ -232,14 +261,14 @@ export const ui = {
     updateTrainingDashboard(trainState) {
         if (!trainState) return;
         dom.trainingDashboard.style.display = 'block';
-        
+
         const progress = trainState.progress || 0;
         const total = trainState.total || 0;
         const percent = total > 0 ? Math.min(100, (progress / total) * 100).toFixed(1) : 0;
-        
+
         dom.trainProgressFill.style.width = `${percent}%`;
         dom.trainEpochLabel.innerText = `${progress} / ${total} Epochs (${percent}%)`;
-        
+
         dom.trainStatusLabel.innerText = `状态: ${trainState.status === 'training' ? '训练中...' : trainState.status === 'success' ? '已完成' : trainState.status === 'error' ? '出错' : '准备中...'}`;
         dom.trainEtaLabel.innerText = `预计剩余时间: ${trainState.eta || '--'}`;
 
@@ -248,10 +277,12 @@ export const ui = {
         if (trainState.metrics) {
             for (const [key, val] of Object.entries(trainState.metrics)) {
                 const card = document.createElement('div');
-                card.style.cssText = 'background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                card.style.cssText = 'background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                const desc = metricDescriptions[key] || '';
                 card.innerHTML = `
                     <div style="color: #cbd5e1; font-size: 13px; margin-bottom: 5px;">${key}</div>
-                    <div style="color: #38bdf8; font-size: 18px; font-weight: bold;">${val}</div>
+                    <div style="color: #38bdf8; font-size: 18px; font-weight: bold; margin-bottom: 6px;">${val}</div>
+                    <div style="color: #64748b; font-size: 11px; line-height: 1.4;">${desc}</div>
                 `;
                 dom.trainMetricsGrid.appendChild(card);
             }
@@ -274,7 +305,7 @@ export const ui = {
 
         dom.detailsModelName.innerText = detailsData.model_name;
         dom.detailsDatasetName.innerText = detailsData.dataset || '--';
-        
+
         if (detailsData.base_model) {
             dom.detailsBaseModelLink.innerText = detailsData.base_model;
             // storing the base model name for click events
@@ -288,7 +319,7 @@ export const ui = {
 
         // 渲染模型介绍
         if (detailsData.description && detailsData.description.trim()) {
-            dom.detailsModelDescription.innerText = `📝 ${detailsData.description}`;
+            dom.detailsModelDescription.innerText = `📝模型介绍: ${detailsData.description}`;
         } else {
             dom.detailsModelDescription.innerText = '暂无介绍';
         }
@@ -297,8 +328,8 @@ export const ui = {
         dom.detailsParamsTable.innerHTML = '';
         if (detailsData.parameters) {
             let paramsObj = {};
-            try { paramsObj = JSON.parse(detailsData.parameters); } catch(e){}
-            
+            try { paramsObj = JSON.parse(detailsData.parameters); } catch (e) { }
+
             // 详细的参数含义字典
             const paramExplains = {
                 "epochs": "训练轮数，模型完整遍历整个数据集的次数",
@@ -335,9 +366,9 @@ export const ui = {
             for (const [key, val] of Object.entries(paramsObj)) {
                 const tr = document.createElement('tr');
                 tr.style.cssText = 'border-bottom: 1px solid #2d3748;';
-                
+
                 const explain = paramExplains[key] || "自定义训练参数";
-                
+
                 tr.innerHTML = `
                     <td style="padding: 10px; font-family: monospace; color: #38bdf8; font-size: 14px;">${key}</td>
                     <td style="padding: 10px; font-weight: bold; font-size: 14px;">${val}</td>
@@ -347,9 +378,35 @@ export const ui = {
             }
         }
 
+        // 渲染最终训练指标面板
+        dom.detailsFinalMetricsGrid.innerHTML = '';
+        if (detailsData.final_metrics && detailsData.final_metrics.trim()) {
+            let metricsObj = {};
+            try { metricsObj = JSON.parse(detailsData.final_metrics); } catch (e) { }
+
+            if (Object.keys(metricsObj).length > 0) {
+                dom.finalMetricsSection.style.display = 'block';
+                for (const [key, val] of Object.entries(metricsObj)) {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                    const desc = metricDescriptions[key] || '';
+                    card.innerHTML = `
+                        <div style="color: #cbd5e1; font-size: 13px; margin-bottom: 5px;">${key}</div>
+                        <div style="color: #38bdf8; font-size: 18px; font-weight: bold; margin-bottom: 6px;">${val}</div>
+                        <div style="color: #64748b; font-size: 11px; line-height: 1.4;">${desc}</div>
+                    `;
+                    dom.detailsFinalMetricsGrid.appendChild(card);
+                }
+            } else {
+                dom.finalMetricsSection.style.display = 'none';
+            }
+        } else {
+            dom.finalMetricsSection.style.display = 'none';
+        }
+
         // 渲染图表
         dom.detailsChartsGrid.innerHTML = '';
-        
+
         // 图表文件名到中文功能描述的映射
         const chartDescriptions = {
             'results.png': '训练总览：展示训练/验证阶段各项损失值与评估指标（mAP50、mAP50-95等）随 Epoch 的变化趋势，是训练效果的综合仪表盘。',
@@ -375,27 +432,27 @@ export const ui = {
             const imgUrl = `${API_BASE}/trainchart/${chartModelName}/${chartName}?t=${new Date().getTime()}`;
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'background: #0f172a; border-radius: 8px; padding: 15px; border: 1px solid #334155; display: flex; flex-direction: column; align-items: center; gap: 8px;';
-            
+
             // 图表标题
             const title = document.createElement('div');
             title.style.cssText = 'color: #38bdf8; font-size: 15px; font-weight: bold; text-align: center;';
             title.innerText = chartName.split('.')[0].replace(/_/g, ' ').toUpperCase();
-            
+
             // 图表功能描述
             const desc = document.createElement('div');
             desc.style.cssText = 'color: #94a3b8; font-size: 13px; text-align: center; line-height: 1.5; padding: 0 5px; margin-bottom: 5px;';
             desc.innerText = chartDescriptions[chartName] || '训练产物图表';
-            
+
             // 图片
             const img = document.createElement('img');
             img.src = imgUrl;
             img.style.cssText = 'width: 100%; height: auto; border-radius: 6px; display: block; object-fit: contain; min-height: 200px; cursor: pointer;';
             img.title = '点击在新标签页查看大图';
             img.onclick = () => window.open(imgUrl, '_blank');
-            
+
             // 如果不存在该图表则隐藏该卡片
-            img.onerror = () => { wrapper.style.display = 'none'; }; 
-            
+            img.onerror = () => { wrapper.style.display = 'none'; };
+
             wrapper.appendChild(title);
             wrapper.appendChild(desc);
             wrapper.appendChild(img);
