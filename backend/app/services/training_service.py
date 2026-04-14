@@ -136,8 +136,22 @@ class TrainingService:
             # 2. 准备 YOLO 实例
             model = YOLO(base_model_path)
 
+            # 辅助函数：模糊匹配指标字典中的 key
+            # 不同版本的 YOLO 可能使用不同的 key 名 (如 metrics/mAP50(B) vs fitness/mAP50)
+            # 此函数按关键词顺序查找，找到第一个包含关键词的 key 就返回其值
+            def _fuzzy_get(metrics_dict, keywords, default=0):
+                """在 metrics_dict 中按关键词模糊匹配，返回第一个命中的值"""
+                for keyword in keywords:
+                    for k, v in metrics_dict.items():
+                        if keyword.lower() in k.lower():
+                            try:
+                                return round(float(v), 4)
+                            except (TypeError, ValueError):
+                                continue
+                return default
+
             # 注册回调函数
-            def on_train_epoch_end(trainer):
+            def on_fit_epoch_end(trainer):
                 current_epoch = getattr(trainer, "epoch", 0) + 1
                 training_state["progress"] = current_epoch
                 
@@ -153,11 +167,12 @@ class TrainingService:
                 cls_loss = round(float(tloss[1]), 4) if len(tloss) > 1 else 0.0
                 dfl_loss = round(float(tloss[2]), 4) if len(tloss) > 2 else 0.0
 
+                # 使用模糊匹配，兼容不同 YOLO 版本的 key 名差异
                 parsed_metrics = {
-                    "mAP50": round(m.get("metrics/mAP50(B)", 0), 4),
-                    "mAP50-95": round(m.get("metrics/mAP50-95(B)", 0), 4),
-                    "Precision": round(m.get("metrics/precision(B)", 0), 4),
-                    "Recall": round(m.get("metrics/recall(B)", 0), 4),
+                    "mAP50": _fuzzy_get(m, ["mAP50(B)", "mAP50"], 0),
+                    "mAP50-95": _fuzzy_get(m, ["mAP50-95(B)", "mAP50-95"], 0),
+                    "Precision": _fuzzy_get(m, ["precision(B)", "precision"], 0),
+                    "Recall": _fuzzy_get(m, ["recall(B)", "recall"], 0),
                     "Box Loss": box_loss,
                     "Cls Loss": cls_loss,
                     "Dfl Loss": dfl_loss,
@@ -180,7 +195,7 @@ class TrainingService:
                     training_state["eta"] = f"{eta_seconds}秒"
 
             # 绑定回调
-            model.add_callback("on_train_epoch_end", on_train_epoch_end)
+            model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
 
             # 3. 开始训练
             # 设置 output 跑在 runs 目录下，每个任务单独一个项目名，就叫 model_name
@@ -225,7 +240,49 @@ class TrainingService:
             # 执行耗时的训练
             results = model.train(**training_kwargs)
 
-            # 4. 训练结束，处理产物
+            # 4. 训练结束，用权威的 results 对象回填最终指标
+            # 回调函数 on_train_epoch_end 中抓取的指标可能不完整（尤其是单轮训练时
+            # 验证指标 mAP/Precision/Recall 尚未就绪），因此在此处用 YOLO 返回的最终结果覆盖，确保指标准确。
+            try:
+                if results is not None:
+                    # results.results_dict 是 YOLO 训练完成后最权威的指标字典
+                    results_dict = getattr(results, "results_dict", None)
+                    if results_dict and isinstance(results_dict, dict):
+                        # 从权威字典中提取指标，覆盖回调中可能为 0 的值
+                        authoritative_metrics = {
+                            "mAP50": _fuzzy_get(results_dict, ["mAP50(B)", "mAP50"], 0),
+                            "mAP50-95": _fuzzy_get(results_dict, ["mAP50-95(B)", "mAP50-95"], 0),
+                            "Precision": _fuzzy_get(results_dict, ["precision(B)", "precision"], 0),
+                            "Recall": _fuzzy_get(results_dict, ["recall(B)", "recall"], 0),
+                        }
+                        # 只覆盖为 0 或缺失的验证指标，保留回调中已有的损失值
+                        existing = training_state.get("metrics", {})
+                        for key, val in authoritative_metrics.items():
+                            if val > 0 and existing.get(key, 0) == 0:
+                                existing[key] = val
+                        training_state["metrics"] = existing
+                        print(f"[训练指标回填] 使用 results 权威数据覆盖完毕: {training_state['metrics']}")
+                    else:
+                        # 兜底：尝试从 results.box 属性中获取
+                        box = getattr(results, "box", None)
+                        if box is not None:
+                            existing = training_state.get("metrics", {})
+                            fallback_map = {
+                                "mAP50": getattr(box, "map50", 0),
+                                "mAP50-95": getattr(box, "map", 0),
+                                "Precision": getattr(box, "mp", 0),
+                                "Recall": getattr(box, "mr", 0),
+                            }
+                            for key, val in fallback_map.items():
+                                val_f = round(float(val), 4) if val else 0
+                                if val_f > 0 and existing.get(key, 0) == 0:
+                                    existing[key] = val_f
+                            training_state["metrics"] = existing
+                            print(f"[训练指标回填] 使用 results.box 兜底数据覆盖完毕: {training_state['metrics']}")
+            except Exception as backfill_err:
+                print(f"[训练指标回填] 回填过程出现异常(不影响训练结果): {backfill_err}")
+
+            # 5. 处理训练产物
             # ultralytics 的保存目录
             run_dir = os.path.join(settings.BASE_DIR, "runs", "detect", model_name)
             best_pt_path = os.path.join(run_dir, "weights", "best.pt")
@@ -259,7 +316,7 @@ class TrainingService:
             # dataset 可能只是个 yaml 路径字符串，前端发过来的是纯名字或带 data.yaml，这里保留纯名字
             dataset_name_clean = os.path.basename(dataset_yaml_path)
             
-            # 将最后一轮的训练指标序列化为 JSON 存入数据库
+            # 将经过回填校正后的最终指标序列化为 JSON 存入数据库
             final_metrics_json = json.dumps(training_state.get("metrics", {}), ensure_ascii=False)
 
             db_service.add_training_record(
