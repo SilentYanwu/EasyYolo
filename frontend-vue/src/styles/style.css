@@ -1,0 +1,74 @@
+/* 主样式文件 - 导入所有模块 */
+@import url('base/variables.css');
+@import url('base/reset.css');
+@import url('base/layout.css');
+@import url('components/sidebar.css');
+@import url('components/buttons.css');
+@import url('components/modals.css');
+@import url('components/history.css');
+@import url('components/batch.css');
+@import url('components/inference.css');
+@import url('components/training.css');
+@import url('components/details.css');
+@import url('utils/animations.css');
+
+/* 全局滚动条美化 - 暗色调 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* 上下文菜单 */
+.context-menu {
+    position: absolute;
+    right: 10px;
+    top: 35px;
+    background: white;
+    color: var(--text-dark);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    width: 100px;
+    overflow: hidden;
+}
+
+.context-menu.show {
+    display: flex;
+    animation: fadeIn 0.2s;
+}
+
+.context-menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    transition: background-color var(--transition-fast);
+}
+
+.context-menu-item:hover {
+    background-color: #f1f5f9;
+}
+
+.context-menu-item.danger {
+    color: var(--danger-color);
+}
+
+.context-menu-item.danger:hover {
+    background-color: #fee2e2;
+}

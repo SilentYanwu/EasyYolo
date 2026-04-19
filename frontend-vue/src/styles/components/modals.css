@@ -1,0 +1,361 @@
+/* 模态框 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: modalFadeIn 0.3s ease-out;
+    cursor: pointer; /* 提示可以点击关闭 */
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--panel-bg);
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: default; /* 内容区域不继承父级的cursor */
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* 大型模态框的按钮区域 */
+.large-modal .modal-actions {
+    margin-top: 20px;
+    text-align: right;
+    border-top: 1px solid #334155;
+    padding-top: 15px;
+}
+
+/* 取消按钮 */
+.btn-cancel {
+    background: transparent;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-cancel:hover {
+    background: rgba(203, 213, 225, 0.1);
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.modal-actions button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-actions button:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 25px 20px;
+        margin: 20px;
+        max-width: none;
+        width: calc(100% - 40px);
+    }
+
+    .modal-content h3 {
+        font-size: 1.2rem;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .modal-actions button {
+        width: 100%;
+    }
+}
+
+/* 动画定义 */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* 删除相关的模态框特殊样式 */
+#deleteModal .modal-content::before,
+#clearHistoryModal .modal-content::before,
+#deleteHistoryModal .modal-content::before {
+    background: linear-gradient(90deg, var(--danger-color), #ff6b6b);
+}
+
+#deleteModal .modal-content h3,
+#clearHistoryModal .modal-content h3,
+#deleteHistoryModal .modal-content h3 {
+    color: var(--danger-color);
+}
+
+#deleteModal .btn.primary,
+#clearHistoryModal .btn.primary,
+#deleteHistoryModal .btn.primary {
+    background: var(--danger-color);
+    color: white;
+}
+
+#deleteModal .btn.primary:hover,
+#clearHistoryModal .btn.primary:hover,
+#deleteHistoryModal .btn.primary:hover {
+    background: var(--danger-hover);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+
+.modal-content h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-dark);
+    font-size: 1.2rem;
+}
+
+.modal-subtitle {
+    font-size: 14px;
+    font-weight: normal;
+    color: #94a3b8;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="file"] {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    transition: border-color var(--transition-fast);
+}
+
+.modal-content input[type="text"]:focus,
+.modal-content input[type="file"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 警告模态框特殊样式 */
+#warningModal .modal-content::before {
+    background: linear-gradient(90deg, #ff9800, #ffc107);
+}
+
+#warningModal .modal-content h3 {
+    color: #ff9800;
+}
+
+#warningModal .btn.primary:hover {
+    background: #f57c00;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+/* 训练参数大型模态框特殊样式 */
+.large-modal {
+    border: 1px solid #334155 !important;
+    background: #0f172a !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Element Plus对话框样式覆盖 */
+.training-params-dialog .el-dialog {
+    background: #0f172a !important;
+    border: 1px solid #334155 !important;
+}
+
+.training-params-dialog .el-dialog__header {
+    background: linear-gradient(90deg, #1e293b, #0f172a) !important;
+    border-bottom: 1px solid #334155 !important;
+    padding: 20px 25px !important;
+}
+
+.training-params-dialog .el-dialog__title {
+    color: #f1f5f9 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+}
+
+.training-params-dialog .el-dialog__body {
+    background: #0f172a !important;
+    padding: 0 25px 25px 25px !important;
+    color: #f1f5f9 !important;
+}
+
+.training-params-dialog .el-dialog__footer {
+    background: #1e293b !important;
+    border-top: 1px solid #334155 !important;
+    padding: 15px 25px !important;
+}
+
+.large-modal::before {
+    background: linear-gradient(90deg, #38bdf8, #818cf8) !important;
+    height: 5px !important;
+}
+
+.param-fieldset {
+    border-color: #334155;
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 20px 25px !important;
+    transition: border-color 0.2s;
+}
+
+.param-fieldset:hover {
+    border-color: #475569;
+}
+
+.param-fieldset legend {
+    font-size: 15px;
+    background: #0f172a;
+    padding: 0 15px !important;
+    border-radius: 4px;
+    border: 1px solid #334155;
+    font-weight: bold;
+    color: #38bdf8;
+}
+
+.param-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-item label {
+    margin: 0;
+}
+
+.checkbox-item .help-text {
+    display: inline;
+}
+
+.param-item label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.param-item .help-text {
+    font-size: 12px;
+    font-weight: normal;
+    color: #94a3b8;
+}
+
+.large-modal .form-input, .large-modal .form-select {
+    background: #0f172a !important;
+    border: 1px solid #475569 !important;
+    color: #f8fafc !important;
+    border-radius: 6px !important;
+    padding: 10px 12px !important;
+    font-family: monospace;
+    transition: all 0.2s;
+}
+
+.large-modal .form-input:focus, .large-modal .form-select:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+    outline: none;
+}
+
+/* 覆盖复选框默认样式使其更美观 */
+.large-modal input[type="checkbox"] {
+    appearance: none;
+    background-color: #0f172a;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.large-modal input[type="checkbox"]::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em #38bdf8;
+    background-color: #38bdf8;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.large-modal input[type="checkbox"]:checked {
+    background-color: rgba(56, 189, 248, 0.1);
+    border-color: #38bdf8;
+}
+
+.large-modal input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}

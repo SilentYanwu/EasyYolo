@@ -4,7 +4,7 @@
 
 本项目旨在开发一个可以像使用DeepSeek等大模型聊天功能一样使用YOLO模型，训练，推理的系统框架。
 
-目前使用的技术栈是YOLOv11+FastAPI+原生JS+SQLite
+目前使用的技术栈是YOLOv11+Python+FastAPI+原生JS+SQLite
 
 这里是由ai撰写，我负责修改的开发日志: [日志](docs/日志.md)。
 
