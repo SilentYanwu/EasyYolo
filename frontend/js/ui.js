@@ -269,7 +269,7 @@ export const ui = {
         dom.trainProgressFill.style.width = `${percent}%`;
         dom.trainEpochLabel.innerText = `${progress} / ${total} Epochs (${percent}%)`;
 
-        dom.trainStatusLabel.innerText = `状态: ${trainState.status === 'training' ? '训练中...' : trainState.status === 'success' ? '已完成' : trainState.status === 'error' ? '出错' : '准备中...'}`;
+        dom.trainStatusLabel.innerText = `状态: ${trainState.status === 'training' ? '训练中...' : trainState.status === 'success' ? '已完成' : trainState.status === 'error' ? '出错' : trainState.status === 'stopped' ? '已停止' : '准备中...'}`;
         dom.trainEtaLabel.innerText = `预计剩余时间: ${trainState.eta || '--'}`;
 
         // 更新指标卡片

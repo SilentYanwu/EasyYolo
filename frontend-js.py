@@ -6,7 +6,7 @@ import sys
 
 # 设置前端目录路径
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
-PORT = 5502
+PORT = 5500
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):

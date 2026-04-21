@@ -16,7 +16,7 @@ from backend.app.services.db_service import db_service
 # 全局训练状态单例 (只允许同时跑一个训练任务)
 training_state = {
     "model_name": None,       # 正在训练的新模型名字
-    "status": "idle",         # 'idle', 'training', 'success', 'error'
+    "status": "idle",         # 'idle', 'training', 'success', 'error', 'stopped'
     "progress": 0,            # 当前 Epoch
     "total": 0,               # 总 Epochs
     "metrics": {},            # 实时指标 (如 box_loss, mAP50)
@@ -25,6 +25,9 @@ training_state = {
     "start_time": 0,          # 训练开始时间戳
     "last_epoch_time": 0      # 上一轮结束时间戳
 }
+
+# 训练停止事件
+stop_training_event = threading.Event()
 
 class TrainingService:
 
@@ -101,6 +104,10 @@ class TrainingService:
         training_state["start_time"] = time.time()
         training_state["last_epoch_time"] = time.time()
 
+        # 重置停止事件
+        global stop_training_event
+        stop_training_event.clear()
+
         # 启动后台线程执行 YOLO.train 以免阻塞事件循环
         t = threading.Thread(
             target=self._run_yolo_training, 
@@ -119,6 +126,9 @@ class TrainingService:
         saved_model_name = yolo_service._current_model_name
         saved_category = yolo_service._current_category
         yolo_service.unload_model()
+
+        # 定义临时运行目录，用于成功或失败后的清理
+        run_dir = os.path.join(settings.BASE_DIR, "runs", "detect", model_name)
 
         try:
             # 1. 找到基础模型路径
@@ -152,13 +162,21 @@ class TrainingService:
 
             # 注册回调函数
             def on_fit_epoch_end(trainer):
+                # 检查停止训练事件
+                global stop_training_event
+                if stop_training_event.is_set():
+                    training_state["status"] = "stopped"
+                    training_state["error_msg"] = "训练被用户终止"
+                    training_state["eta"] = "已停止"
+                    raise RuntimeError("Training stopped by user")
+
                 current_epoch = getattr(trainer, "epoch", 0) + 1
                 training_state["progress"] = current_epoch
-                
+
                 # 提取指标
                 # metrics 大致格式: {'metrics/mAP50(B)': 0.5, 'val/box_loss': 1.2, ...}
                 m = getattr(trainer, "metrics", {})
-                
+
                 tloss = getattr(trainer, "tloss", [0, 0, 0])
                 if not isinstance(tloss, list) and not isinstance(tloss, tuple) and not type(tloss).__name__ == 'Tensor':
                     tloss = [0, 0, 0] # 防御性编程
@@ -183,10 +201,10 @@ class TrainingService:
                 now = time.time()
                 epoch_time = now - training_state["last_epoch_time"]
                 training_state["last_epoch_time"] = now
-                
+
                 remaining_epochs = training_state["total"] - current_epoch
                 eta_seconds = int(epoch_time * remaining_epochs)
-                
+
                 if eta_seconds > 3600:
                     training_state["eta"] = f"{eta_seconds // 3600}小时 {(eta_seconds % 3600) // 60}分钟"
                 elif eta_seconds > 60:
@@ -283,8 +301,7 @@ class TrainingService:
                 print(f"[训练指标回填] 回填过程出现异常(不影响训练结果): {backfill_err}")
 
             # 5. 处理训练产物
-            # ultralytics 的保存目录
-            run_dir = os.path.join(settings.BASE_DIR, "runs", "detect", model_name)
+            # ultralytics 的保存目录 (已在上方定义)
             best_pt_path = os.path.join(run_dir, "weights", "best.pt")
             
             if not os.path.exists(best_pt_path):
@@ -338,11 +355,25 @@ class TrainingService:
             training_state["eta"] = "已完成"
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            training_state["status"] = "error"
-            training_state["error_msg"] = str(e)
-            training_state["eta"] = "训练错误"
+            global stop_training_event
+            if stop_training_event.is_set():
+                # 用户主动停止训练，不打印完整 traceback
+                print(f"Training stopped by user at epoch {training_state['progress']}/{training_state['total']}")
+                training_state["status"] = "stopped"
+                training_state["error_msg"] = "训练被用户终止"
+                training_state["eta"] = "已停止"
+            else:
+                # 其他错误，打印 traceback 以便调试
+                import traceback
+                traceback.print_exc()
+                training_state["status"] = "error"
+                training_state["error_msg"] = str(e)
+                training_state["eta"] = "训练错误"
+
+            # 训练失败/停止时也清理临时目录
+            if os.path.exists(run_dir):
+                shutil.rmtree(run_dir, ignore_errors=True)
+                print(f"Cleaned up temporary run directory after failure/stop: {run_dir}")
 
         # 5. 最后执行的代码块
         finally:
@@ -362,5 +393,14 @@ class TrainingService:
     def get_progress(self):
         """前端获取进度的只读接口"""
         return training_state
+
+    def stop_training(self):
+        """停止当前训练任务"""
+        global stop_training_event
+        if training_state["status"] == "training":
+            stop_training_event.set()
+            return {"status": "success", "message": "停止训练信号已发送"}
+        else:
+            return {"status": "error", "message": "当前没有正在进行的训练任务"}
 
 training_service = TrainingService()

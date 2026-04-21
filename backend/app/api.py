@@ -299,6 +299,11 @@ def training_progress():
     """获取前端轮询需要的实时训练状态"""
     return training_service.get_progress()
 
+@app.post("/stop_training")
+def stop_training():
+    """停止当前正在进行的训练任务"""
+    return training_service.stop_training()
+
 @app.get("/training_history/{model_name}")
 def get_training_history(model_name: str):
     """获取某个模型的详细训练记录"""

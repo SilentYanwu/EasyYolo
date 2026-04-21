@@ -36,6 +36,10 @@ def start_frontend():
     if not os.path.exists(node_modules_path):
         print("检测到未安装依赖，正在安装依赖...")
         subprocess.run(['npm', 'install'], cwd=frontend_dir, shell=True)
+    
+        # 安装element-plus和axios
+        print("正在安装 element-plus 和 axios...")
+        subprocess.run(['npm', 'install', 'element-plus', 'axios'], cwd=frontend_dir, shell=True)
 
     # 查找可用端口
     port = find_available_port()

@@ -1,20 +1,15 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import 'element-plus/dist/index.css'
 
 import App from './App.vue'
-import './styles/style.css'
+import router from './router'
 
-/**
- * 应用入口：
- * 1. 挂载 Element Plus（中文语言包）
- * 2. 注入全局样式（保持和原 GUI 观感一致）
- */
 const app = createApp(App)
 
-app.use(ElementPlus, {
-  locale: zhCn,
-})
+app.use(createPinia())
+app.use(router)
+app.use(ElementPlus)
 
 app.mount('#app')

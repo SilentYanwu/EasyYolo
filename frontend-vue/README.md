@@ -1,88 +1,48 @@
-# EasyYolo 前端项目
+# frontend-vue
 
-这是 EasyYolo 目标检测系统的前端项目，基于 Vue 3 + TypeScript + Element Plus + Vite 构建。
+This template should help get you started developing with Vue 3 in Vite.
 
-## 技术栈
+## Recommended IDE Setup
 
-- Vue 3 - 渐进式 JavaScript 框架
-- TypeScript - JavaScript 的超集，添加了类型系统
-- Vue Router - Vue 官方路由管理器
-- Pinia - Vue 3 官方推荐的状态管理库
-- Element Plus - 基于 Vue 3 的组件库
-- Axios - HTTP 客户端
-- Vite - 下一代前端构建工具
+[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-## 项目结构
+## Recommended Browser Setup
 
-```
-frontend-vue/
-├── src/
-│   ├── views/           # 页面组件
-│   │   ├── RecognitionView.vue   # 模型识别页面
-│   │   ├── TrainView.vue         # 模型训练页面
-│   │   └── DetailsView.vue       # 详情页面
-│   ├── router/          # 路由配置
-│   │   └── index.ts
-│   ├── stores/          # 状态管理
-│   │   └── counter.ts
-│   ├── App.vue          # 根组件
-│   └── main.ts          # 入口文件
-├── public/              # 静态资源
-├── package.json         # 项目依赖
-└── vite.config.ts       # Vite 配置
-```
+- Chromium-based browsers (Chrome, Edge, Brave, etc.):
+  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
+- Firefox:
+  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## 安装依赖
+## Type Support for `.vue` Imports in TS
 
-```bash
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
 npm install
 ```
 
-## 开发模式运行
+### Compile and Hot-Reload for Development
 
-```bash
+```sh
 npm run dev
 ```
 
-## 生产构建
+### Type-Check, Compile and Minify for Production
 
-```bash
+```sh
 npm run build
 ```
 
-## 预览生产构建
+### Lint with [ESLint](https://eslint.org/)
 
-```bash
-npm run preview
+```sh
+npm run lint
 ```
-
-## 功能说明
-
-### 模型识别
-- 上传图片进行目标检测
-- 显示识别结果，包括类别、置信度和边界框
-- 支持清除上传的图片和识别结果
-
-### 模型训练
-- 配置训练参数（模型名称、数据集、训练轮数等）
-- 实时显示训练进度
-- 显示训练日志
-
-### 详情页面
-- 查看已训练的模型列表
-- 查看历史操作记录
-- 查看系统信息
-
-## 注意事项
-
-1. 当前版本使用模拟数据，需要连接后端API才能实现完整功能
-2. 后端API地址需要在 axios 配置中设置
-3. 部分功能（如模型训练、图像识别）需要后端支持
-
-## 后续开发计划
-
-- [ ] 连接后端API
-- [ ] 实现用户认证
-- [ ] 添加数据可视化
-- [ ] 优化性能和用户体验
-- [ ] 添加单元测试

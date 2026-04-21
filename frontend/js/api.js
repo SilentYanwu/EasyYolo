@@ -142,6 +142,14 @@ export const api = {
     },
 
     /**
+     * 停止当前训练任务
+     */
+    async stopTraining() {
+        const res = await fetch(`${API_BASE}/stop_training`, { method: 'POST' });
+        return await res.json();
+    },
+
+    /**
      * 获取单一模型训练详细历史
      */
     async getTrainingHistory(modelName) {

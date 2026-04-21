@@ -668,21 +668,74 @@ async function handleStartTraining() {
         const data = await res.json();
         if (res.ok) {
             alert('训练任务已在后台启动！您可以从进度面板查看。');
+            // 训练已启动，更新按钮为停止训练
+            updateTrainButton('training');
+            state.lastTrainingStatus = 'training';
         } else {
             alert(data.detail || '启动训练失败');
         }
     } catch (e) {
         alert('启动训练出错: ' + e.message);
     } finally {
-        // 解除按钮锁定
+        // 如果启动失败，恢复按钮
+        if (state.lastTrainingStatus !== 'training') {
+            dom.startTrainBtn.disabled = false;
+            dom.startTrainBtn.innerText = '开始训练';
+            dom.startTrainBtn.onclick = window.startTraining;
+        }
+    }
+}
+
+// 处理停止训练
+async function handleStopTraining() {
+    if (!confirm('确定要停止当前训练吗？停止后无法恢复。')) return;
+
+    dom.startTrainBtn.disabled = true;
+    dom.startTrainBtn.innerText = '停止中...';
+
+    try {
+        const result = await api.stopTraining();
+        if (result.status === 'success') {
+            alert('已发送停止训练信号，训练将尽快终止。');
+        } else {
+            alert('停止训练失败: ' + result.message);
+        }
+    } catch (e) {
+        alert('请求出错: ' + e.message);
+    } finally {
+        // 按钮状态将由轮询器根据训练状态更新
+    }
+}
+
+// 根据训练状态更新按钮
+function updateTrainButton(status) {
+    console.log(`updateTrainButton called with status: ${status}`);
+    if (status === 'training') {
+        dom.startTrainBtn.disabled = false;
+        dom.startTrainBtn.innerText = '停止训练';
+        dom.startTrainBtn.onclick = handleStopTraining;
+        console.log('Button changed to: 停止训练');
+    } else {
         dom.startTrainBtn.disabled = false;
         dom.startTrainBtn.innerText = '开始训练';
+        dom.startTrainBtn.onclick = window.startTraining;
+        console.log('Button changed to: 开始训练');
     }
 }
 
 // 启动训练状态轮询器
 function startTrainingPoller() {
     if (trainingPoller) clearInterval(trainingPoller);
+
+    // 初始加载时获取一次训练状态并更新按钮
+    (async () => {
+        try {
+            const data = await api.getTrainingProgress();
+            updateTrainButton(data.status);
+        } catch (e) {
+            console.warn("初始加载训练状态失败", e);
+        }
+    })();
 
     trainingPoller = setInterval(async () => {
         try {
@@ -697,6 +750,9 @@ function startTrainingPoller() {
                 }
             }
 
+            // 根据训练状态更新按钮
+            updateTrainButton(data.status);
+
             // 检测训练完成并弹出通知
             if (state.lastTrainingStatus === 'training' && data.status === 'success') {
                 state.lastTrainingStatus = 'success';
@@ -705,6 +761,9 @@ function startTrainingPoller() {
             } else if (state.lastTrainingStatus === 'training' && data.status === 'error') {
                 state.lastTrainingStatus = 'error';
                 alert(`❌ 训练出错：${data.error_msg || '未知错误'}`);
+            } else if (state.lastTrainingStatus === 'training' && data.status === 'stopped') {
+                state.lastTrainingStatus = 'stopped';
+                alert('训练已停止。');
             } else {
                 // 平时同步状态
                 state.lastTrainingStatus = data.status;
