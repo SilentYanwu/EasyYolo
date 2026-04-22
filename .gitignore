@@ -2,9 +2,10 @@
 # 添加以下内容
 .Backup
 .vscode
-database
+database/
 **/__pycache__/
 .TestData
 /backend/inferecord
 /backend/trainchart
 datasets
+models/trained/

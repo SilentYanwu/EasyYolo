@@ -5,6 +5,7 @@ import { dom } from './dom.js';
 import { state } from './state.js';
 import { ui } from './ui.js';
 import { api } from './api.js';
+import { MAX_TRAINING_TASKS } from './config.js';
 
 let selectedFiles = [];
 const trainParams=  {
@@ -336,8 +337,8 @@ const multiTaskManager = {
 
     // 添加新任务
     addTask() {
-        if (this.tasks.length >= 6) {
-            alert('最多支持6个任务');
+        if (this.tasks.length >= MAX_TRAINING_TASKS) {
+            alert(`最多支持${MAX_TRAINING_TASKS}个任务`);
             return false;
         }
 
@@ -1401,8 +1402,8 @@ function renderTaskList() {
 
     // 更新提示
     const hint = document.getElementById('multiTaskHint');
-    if (multiTaskManager.tasks.length >= 6) {
-        hint.textContent = '已达到最大任务数(6个)';
+    if (multiTaskManager.tasks.length >= MAX_TRAINING_TASKS) {
+        hint.textContent = `已达到最大任务数(${MAX_TRAINING_TASKS}个)`;
     } else {
         hint.textContent = `默认显示"任务一"，新增任务会按顺序编号`;
     }

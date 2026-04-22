@@ -28,6 +28,12 @@ class Settings:
     # 5. 默认模型
     DEFAULT_MODEL_NAME = "yolo11n.pt"
 
+    # 6. 批量推理限制
+    MAX_BATCH_IMAGES = 99  # 批量推理最大图片数
+
+    # 7. 模型记录限制
+    MAX_RECORDS_PER_MODEL= 199 # 每个模型最大记录数，超过则删除最旧记录
+
 settings = Settings()
 
 # 自动创建必要的文件夹，防止报错

@@ -89,7 +89,7 @@ class DBService:
             print(f"Error deleting files: {e}")
 
     def add_record(self, model_name, original_url, result_url):
-        """添加记录并保持每个模型最多99条"""
+        """添加记录并保持每个模型最多MAX_RECORDS_PER_MODEL条"""
         db = self._get_db()
         try:
             # 1. 插入新记录
@@ -101,17 +101,17 @@ class DBService:
             db.add(new_record)
             db.commit() # 提交以确保新记录已分配 ID
             
-            # 2. 检查记录数量，超出 99 条的部分需要清理
-            # 这里的逻辑是：找出该模型下 ID 不在“最新的99条”之内的记录
-            # 子查询：获取最新的 99 条记录的 ID
+            # 2. 检查记录数量，超出 MAX_RECORDS_PER_MODEL 条的部分需要清理
+            # 这里的逻辑是：找出该模型下 ID 不在“最新的MAX_RECORDS_PER_MODEL条”之内的记录
+            # 子查询：获取最新的 MAX_RECORDS_PER_MODEL 条记录的 ID
             latest_ids_subquery = db.query(InferenceHistory.id).\
                 filter(InferenceHistory.model_name == model_name).\
                 order_by(desc(InferenceHistory.id)).\
-                limit(99).all()
+                limit(settings.MAX_RECORDS_PER_MODEL).all()
             
             latest_ids = [r[0] for r in latest_ids_subquery]
             
-            # 获取超过 99 条的旧记录
+            # 获取超过 MAX_RECORDS_PER_MODEL 条的旧记录
             old_records = db.query(InferenceHistory).\
                 filter(InferenceHistory.model_name == model_name).\
                 filter(~InferenceHistory.id.in_(latest_ids)).all()

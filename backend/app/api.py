@@ -222,13 +222,13 @@ async def predict(file: UploadFile = File(...)):
 async def predict_batch(files: List[UploadFile] = File(...)):
     """
     批量推理接口（生产者-消费者模式 + SSE 实时推送）
-    上限 99 张图片，逐张推理并推送进度
-    """
+    上限 {max_images} 张图片，逐张推理并推送进度
+    """.format(max_images=settings.MAX_BATCH_IMAGES)
     # 校验数量上限
-    if len(files) > 99:
+    if len(files) > settings.MAX_BATCH_IMAGES:
         raise HTTPException(
             status_code=400,
-            detail="单次最多支持 99 张图片"
+            detail=f"单次最多支持 {settings.MAX_BATCH_IMAGES} 张图片"
         )
 
     # 过滤非图片文件
