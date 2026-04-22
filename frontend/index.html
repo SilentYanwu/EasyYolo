@@ -194,6 +194,14 @@
                     </svg>
                 </button>
                 <h1 style="margin: 0;">模型训练工作台</h1>
+                <div class="training-mode-switcher" style="margin-left: 30px; display: flex; align-items: center; gap: 8px;">
+                    <button id="singleTaskModeBtn" class="mode-btn active" onclick="switchTrainingMode('single')">单任务模式</button>
+                    <button id="multiTaskModeBtn" class="mode-btn" onclick="switchTrainingMode('multi')">多任务模式</button>
+                </div>
+                <div class="multi-task-controls" style="margin-left: auto; display: none;">
+                    <button id="addTaskBtn" class="btn info" style="margin-right: 10px;">+ 增加训练任务</button>
+                    <button id="queueStartBtn" class="btn success">队列开始训练</button>
+                </div>
             </header>
             <div class="workspace" id="training-workspace">
 
@@ -249,9 +257,20 @@
 
                 </div>
 
+                <!-- 多任务模式界面 -->
+                <div id="multiTaskContainer" class="multi-task-container" style="display: none;">
+                    <div class="multi-task-header">
+                        <h3>训练任务队列 (<span id="taskCount">1</span>/6)</h3>
+                        <div class="multi-task-hint" id="multiTaskHint">默认显示"任务一"，新增任务会按顺序编号</div>
+                    </div>
+                    <div id="taskList" class="task-list">
+                        <!-- 任务卡片将动态添加到这里 -->
+                    </div>
+                </div>
+
                 <!-- 训练进度与监控面板 -->
                 <div class="training-dashboard" id="trainingDashboard">
-                    <h3>训练进度监控</h3>
+                    <h3>训练进度监控 <span id="trainTaskTitle" style="font-size: 14px; color: #94a3b8;"></span></h3>
                     <div class="training-status">
                         <span id="trainStatusLabel">状态: 准备中...</span>
                         <span id="trainEtaLabel">预计剩余时间: --</span>
@@ -595,6 +614,102 @@
             <div class="modal-actions">
                 <button onclick="closeTrainingParamsModal()" class="btn-cancel">取消</button>
                 <button onclick="saveTrainingParams()" class="btn primary">确认保存参数</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务卡片模板 (用于克隆) -->
+    <template id="taskCardTemplate">
+        <div class="task-card" data-task-index="0">
+            <div class="task-card-header">
+                <h4 class="task-title">任务一</h4>
+                <button class="task-delete-btn" title="删除任务" onclick="deleteTask(this)">✕</button>
+            </div>
+            <div class="task-card-content">
+                <div class="task-form-row model-source-section">
+                    <div class="form-group">
+                        <label class="label-primary">模型来源</label>
+                        <select class="model-source-select form-select">
+                            <option value="existing">使用现有模型</option>
+                            <option value="previous" selected>承接上个任务的模型</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="model-source-existing">
+                            <label class="label-primary">选取基础模型</label>
+                            <select class="base-model-select form-select"></select>
+                        </div>
+                        <div class="model-source-previous" style="display: none;">
+                            <label class="label-success">承接模型</label>
+                            <div class="previous-model-info">将承接上一个任务训练完成的模型</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-form-row">
+                    <div class="form-group">
+                        <label class="label-purple">新模型名称</label>
+                        <input type="text" class="new-model-name form-input" placeholder="例如: pcb_defect_v1">
+                    </div>
+                    <div class="form-group">
+                        <label class="label-success">模型介绍 (选填)</label>
+                        <input type="text" class="model-description form-input" placeholder="例如: 钢材表面缺陷检测模型">
+                    </div>
+                </div>
+                <div class="task-form-row dataset-upload-section">
+                    <div class="form-group">
+                        <label class="label-warning">数据集</label>
+                        <div class="dataset-upload-controls">
+                            <input type="file" class="dataset-input" accept=".zip" hidden>
+                            <button class="btn info upload-dataset-btn">📦 上传</button>
+                            <span class="dataset-name">未选择</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="label-primary">参数</label>
+                        <button class="btn info open-params-btn">⚙️ 调整</button>
+                    </div>
+                </div>
+                <div class="task-status" style="display: none;">
+                    <div class="task-status-indicator">
+                        <span class="status-text">等待执行</span>
+                        <span class="progress-text">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 队列停止确认模态框 -->
+    <div id="stopQueueModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>确认停止队列</h3>
+            <p>停止后将终止当前训练，所有任务重置为未开始。确定吗？</p>
+            <div class="modal-actions">
+                <button onclick="closeStopQueueModal()">取消</button>
+                <button onclick="confirmStopQueue()" class="btn primary">确定停止</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务失败提示模态框 -->
+    <div id="taskFailedModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>任务失败</h3>
+            <p id="taskFailedMessage">任务 X 失败，队列已停止</p>
+            <div class="modal-actions">
+                <button onclick="closeTaskFailedModal()" class="btn primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 切换模式确认模态框 -->
+    <div id="switchModeModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>切换训练模式</h3>
+            <p id="switchModeMessage">切换至单任务模式将清空当前多任务队列，是否继续？</p>
+            <div class="modal-actions">
+                <button onclick="cancelSwitchMode()">取消</button>
+                <button onclick="confirmSwitchMode()" class="btn primary">确认切换</button>
             </div>
         </div>
     </div>

@@ -68,6 +68,7 @@ export const dom = {
     trainProgressFill: document.getElementById('trainProgressFill'),
     trainEpochLabel: document.getElementById('trainEpochLabel'),
     trainMetricsGrid: document.getElementById('trainMetricsGrid'),
+    trainTaskTitle: document.getElementById('trainTaskTitle'),
 
     // 训练参数模态框
     trainingParamsModal: document.getElementById('trainingParamsModal'),

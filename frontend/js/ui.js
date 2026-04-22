@@ -262,6 +262,13 @@ export const ui = {
         if (!trainState) return;
         dom.trainingDashboard.style.display = 'block';
 
+        // 更新任务标题（多任务模式）
+        if (trainState.taskTitle) {
+            dom.trainTaskTitle.textContent = ` - ${trainState.taskTitle}`;
+        } else {
+            dom.trainTaskTitle.textContent = '';
+        }
+
         const progress = trainState.progress || 0;
         const total = trainState.total || 0;
         const percent = total > 0 ? Math.min(100, (progress / total) * 100).toFixed(1) : 0;

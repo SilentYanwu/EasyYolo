@@ -7,7 +7,15 @@ export const state = {
     currentDetailsModelName: "", // 当前在详情页查看的模型名
     activeMenuId: null,         // 当前展开的上下文菜单ID
     lastTrainingStatus: "idle", // 上次记录的训练状态，用于检测状态切换
-    
+
+    // 训练模式：从本地存储读取和保存
+    get trainingMode() {
+        return localStorage.getItem('trainingMode') || 'single';
+    },
+    set trainingMode(value) {
+        localStorage.setItem('trainingMode', value);
+    },
+
     // 侧边栏状态：从本地存储读取
     get isSidebarCollapsed() {
         return localStorage.getItem('sidebarCollapsed') === 'true';
