@@ -10,10 +10,8 @@ from backend.app.core.config import settings
 class YoloService:
     def __init__(self):
         self.model = None
-        self._current_model_name = None
-        self._current_category = None
-        # 初始化时加载默认模型 (从 raw 目录)
-        self.load_model(settings.DEFAULT_MODEL_NAME, category="raw")
+        self._current_model_name = settings.DEFAULT_MODEL_NAME
+        self._current_category = "raw"
 
     def unload_model(self):
         """
@@ -65,30 +63,35 @@ class YoloService:
             print(f"Loading model from: {model_path}")
             self.model = YOLO(model_path)
 
+    def _ensure_model_loaded(self):
+        if self.model is None:
+            model_name = self._current_model_name or settings.DEFAULT_MODEL_NAME
+            category = self._current_category or "raw"
+            self.load_model(model_name, category)
+
     def predict_image(self, source_path: str, save_path: str, conf: float = 0.25):
         """
         执行推理并保存图片
         """
-        if not self.model:
-            raise RuntimeError("Model not loaded")
+        self._ensure_model_loaded()
 
         # 推理
         results = self.model.predict(source=source_path, conf=conf)
-        
+
         # 绘制结果（YOLO内部自带）
         result_img = results[0].plot()
-        
+
         # 保存图片
         cv2.imwrite(save_path, result_img)
-        
+
         return results[0].to_json()
+
 
     def predict_video_stream(self, source_path: str, save_path: str, conf: float = 0.25):
         """
         视频推理生成器：逐帧处理并 yield 进度
         """
-        if not self.model:
-            raise RuntimeError("Model not loaded")
+        self._ensure_model_loaded()
 
         cap = cv2.VideoCapture(source_path)
         if not cap.isOpened():

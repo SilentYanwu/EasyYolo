@@ -9,3 +9,4 @@ database/
 /backend/trainchart
 datasets
 models/trained/
+.claude

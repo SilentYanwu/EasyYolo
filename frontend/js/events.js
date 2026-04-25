@@ -9,8 +9,8 @@ import { MAX_TRAINING_TASKS } from './config.js';
 
 let selectedFiles = [];
 const trainParams=  {
-            epochs: 5,
-            patience: 50,
+            epochs: 50,
+            patience: 20,
             batch: 16,
             imgsz: 640,
             optimizer: 'auto',
@@ -1138,7 +1138,11 @@ function startTrainingPoller() {
                 state.lastTrainingStatus = 'success';
                 // 多任务队列运行中，由 waitForTaskCompletion 统一处理队列流转
                 if (!isMultiQueueRunning) {
-                    alert(`🎉 训练完成！新模型 "${data.model_name}" 已就绪。\n点击确认后将刷新页面以加载最新数据。`);
+                    if (data.early_stopped) {
+                        alert(`🎉 训练早停完成！新模型 "${data.model_name}" 已就绪。\n早停轮次: 第 ${data.early_stop_epoch}/${data.total} 轮 (连续多轮指标无提升，自动停止)\n点击确认后将刷新页面以加载最新数据。`);
+                    } else {
+                        alert(`🎉 训练完成！新模型 "${data.model_name}" 已就绪。\n点击确认后将刷新页面以加载最新数据。`);
+                    }
                     window.location.reload();
                 }
             } else if (state.lastTrainingStatus === 'training' && data.status === 'error') {

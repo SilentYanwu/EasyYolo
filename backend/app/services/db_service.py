@@ -54,6 +54,8 @@ class TrainingHistory(Base):
     parameters = Column(String)                                          # 训练参数 (JSON 字符串)
     description = Column(String, default="")                              # 模型介绍
     final_metrics = Column(String, default="")                            # 训练完成时最终指标 (JSON 字符串)
+    early_stopped = Column(Integer, default=0)                            # 是否早停完成 (0=正常完成, 1=早停完成)
+    early_stop_epoch = Column(Integer, default=0)                         # 早停时的轮次 (0=未早停)
     created_at = Column(DateTime, default=datetime.now)                  # 训练完成时间
 
 # 自动创建表 (如果不存在)
@@ -198,7 +200,7 @@ class DBService:
 
     # --------------- 训练记录相关 -------------------
 
-    def add_training_record(self, model_name: str, base_model: str, dataset: str, parameters: str, description: str = "", final_metrics: str = ""):
+    def add_training_record(self, model_name: str, base_model: str, dataset: str, parameters: str, description: str = "", final_metrics: str = "", early_stopped: int = 0, early_stop_epoch: int = 0):
         """新增/更新一次训练历史入库"""
         db = self._get_db()
         try:
@@ -210,6 +212,8 @@ class DBService:
                 existing.parameters = parameters
                 existing.description = description
                 existing.final_metrics = final_metrics
+                existing.early_stopped = early_stopped
+                existing.early_stop_epoch = early_stop_epoch
                 existing.created_at = datetime.now()
             else:
                 new_record = TrainingHistory(
@@ -218,7 +222,9 @@ class DBService:
                     dataset=dataset,
                     parameters=parameters,
                     description=description,
-                    final_metrics=final_metrics
+                    final_metrics=final_metrics,
+                    early_stopped=early_stopped,
+                    early_stop_epoch=early_stop_epoch
                 )
                 db.add(new_record)
             db.commit()
@@ -241,6 +247,8 @@ class DBService:
                     "parameters": record.parameters,
                     "description": record.description or "",
                     "final_metrics": record.final_metrics or "",
+                    "early_stopped": record.early_stopped or 0,
+                    "early_stop_epoch": record.early_stop_epoch or 0,
                     "time": record.created_at.strftime("%Y-%m-%d %H:%M:%S") if record.created_at else ""
                 }
             return None

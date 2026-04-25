@@ -4,17 +4,31 @@ import shutil
 def clear_target_folders():
     # 获取当前脚本所在目录
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 要清空的文件夹路径
-    folders_to_clear = [
-        os.path.join(base_dir, "backend", "inferecord", "results"),
-        os.path.join(base_dir, "backend", "inferecord", "uploads"),
-        os.path.join(base_dir, "database"),
-        os.path.join(base_dir, "datasets"),
-        os.path.join(base_dir, "backend", "trainchart"),
-        os.path.join(base_dir, "models", "trained"),
 
-    ]
+    # 要清空的文件夹路径
+    folders_to_clear = []
+
+    print("是否清空模型推理记录（y/n）")
+    choice = input().strip().lower()
+    if choice == 'y':
+        folders_to_clear.append(os.path.join(base_dir, "backend", "inferecord", "results"))
+        folders_to_clear.append(os.path.join(base_dir, "backend", "inferecord", "uploads"))
+
+    print("是否删除数据集？（y/n）")
+    choice = input().strip().lower()
+    if choice == 'y':
+        folders_to_clear.append(os.path.join(base_dir, "datasets"))
+
+    print("是否清空训练好的模型？（y/n）"), 
+    choice = input().strip().lower()
+    if choice == 'y':
+        folders_to_clear.append(os.path.join(base_dir, "models", "trained"))
+
+    print("是否清空训练图表与数据库？（y/n）")
+    choice = input().strip().lower()
+    if choice == 'y':
+        folders_to_clear.append(os.path.join(base_dir, "database"))
+        folders_to_clear.append(os.path.join(base_dir, "backend", "trainchart"))
 
     for folder_path in folders_to_clear:
         # 如果文件夹不存在，跳过

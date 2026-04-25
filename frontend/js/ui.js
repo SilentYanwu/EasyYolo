@@ -387,25 +387,44 @@ export const ui = {
 
         // 渲染最终训练指标面板
         dom.detailsFinalMetricsGrid.innerHTML = '';
+        let metricsObj = {};
         if (detailsData.final_metrics && detailsData.final_metrics.trim()) {
-            let metricsObj = {};
             try { metricsObj = JSON.parse(detailsData.final_metrics); } catch (e) { }
+        }
 
-            if (Object.keys(metricsObj).length > 0) {
-                dom.finalMetricsSection.style.display = 'block';
-                for (const [key, val] of Object.entries(metricsObj)) {
-                    const card = document.createElement('div');
-                    card.style.cssText = 'background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
-                    const desc = metricDescriptions[key] || '';
-                    card.innerHTML = `
-                        <div style="color: #cbd5e1; font-size: 13px; margin-bottom: 5px;">${key}</div>
-                        <div style="color: #38bdf8; font-size: 18px; font-weight: bold; margin-bottom: 6px;">${val}</div>
-                        <div style="color: #64748b; font-size: 11px; line-height: 1.4;">${desc}</div>
-                    `;
-                    dom.detailsFinalMetricsGrid.appendChild(card);
-                }
-            } else {
-                dom.finalMetricsSection.style.display = 'none';
+        const hasEarlyStopInfo = !!detailsData.early_stopped;
+        const hasMetrics = Object.keys(metricsObj).length > 0;
+
+        if (hasEarlyStopInfo || hasMetrics) {
+            dom.finalMetricsSection.style.display = 'block';
+
+            if (hasEarlyStopInfo) {
+                let totalEpochs = 0;
+                try {
+                    const paramsObj = JSON.parse(detailsData.parameters || '{}');
+                    totalEpochs = paramsObj.epochs || 0;
+                } catch (e) { }
+
+                const earlyStopCard = document.createElement('div');
+                earlyStopCard.style.cssText = 'background: #1f2937; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                earlyStopCard.innerHTML = `
+                    <div style="color: #fbbf24; font-size: 13px; margin-bottom: 5px;">训练状态</div>
+                    <div style="color: #f59e0b; font-size: 18px; font-weight: bold; margin-bottom: 6px;">早停完成</div>
+                    <div style="color: #fcd34d; font-size: 11px; line-height: 1.4;">第 ${detailsData.early_stop_epoch}/${totalEpochs} 轮触发早停</div>
+                `;
+                dom.detailsFinalMetricsGrid.appendChild(earlyStopCard);
+            }
+
+            for (const [key, val] of Object.entries(metricsObj)) {
+                const card = document.createElement('div');
+                card.style.cssText = 'background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                const desc = metricDescriptions[key] || '';
+                card.innerHTML = `
+                    <div style="color: #cbd5e1; font-size: 13px; margin-bottom: 5px;">${key}</div>
+                    <div style="color: #38bdf8; font-size: 18px; font-weight: bold; margin-bottom: 6px;">${val}</div>
+                    <div style="color: #64748b; font-size: 11px; line-height: 1.4;">${desc}</div>
+                `;
+                dom.detailsFinalMetricsGrid.appendChild(card);
             }
         } else {
             dom.finalMetricsSection.style.display = 'none';

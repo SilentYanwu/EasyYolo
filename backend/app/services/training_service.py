@@ -23,7 +23,9 @@ training_state = {
     "eta": "计算中...",       # 预计剩余时间
     "error_msg": "",          # 错误信息
     "start_time": 0,          # 训练开始时间戳
-    "last_epoch_time": 0      # 上一轮结束时间戳
+    "last_epoch_time": 0,     # 上一轮结束时间戳
+    "early_stopped": False,   # 是否早停完成
+    "early_stop_epoch": 0     # 早停时的轮次
 }
 
 # 训练停止事件
@@ -103,6 +105,8 @@ class TrainingService:
         training_state["error_msg"] = ""
         training_state["start_time"] = time.time()
         training_state["last_epoch_time"] = time.time()
+        training_state["early_stopped"] = False
+        training_state["early_stop_epoch"] = 0
 
         # 重置停止事件
         global stop_training_event
@@ -161,14 +165,20 @@ class TrainingService:
                 return default
 
             # 注册回调函数
-            def on_fit_epoch_end(trainer):
-                # 检查停止训练事件
+            def _stop_now():
                 global stop_training_event
                 if stop_training_event.is_set():
                     training_state["status"] = "stopped"
                     training_state["error_msg"] = "训练被用户终止"
                     training_state["eta"] = "已停止"
                     raise RuntimeError("Training stopped by user")
+
+            def on_train_batch_start(trainer):
+                _ = trainer
+                _stop_now()
+
+            def on_train_epoch_end(trainer):
+                _stop_now()
 
                 current_epoch = getattr(trainer, "epoch", 0) + 1
                 training_state["progress"] = current_epoch
@@ -213,7 +223,8 @@ class TrainingService:
                     training_state["eta"] = f"{eta_seconds}秒"
 
             # 绑定回调
-            model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
+            model.add_callback("on_train_batch_start", on_train_batch_start)
+            model.add_callback("on_train_epoch_end", on_train_epoch_end)
 
             # 3. 开始训练
             # 设置 output 跑在 runs 目录下，每个任务单独一个项目名，就叫 model_name
@@ -258,8 +269,15 @@ class TrainingService:
             # 执行耗时的训练
             results = model.train(**training_kwargs)
 
+            # 检测是否早停完成：实际完成轮次 < 设定总轮次 说明 patience 触发了早停
+            actual_epochs = training_state["progress"]
+            target_epochs = training_state["total"]
+            if actual_epochs > 0 and actual_epochs < target_epochs:
+                training_state["early_stopped"] = True
+                training_state["early_stop_epoch"] = actual_epochs
+                print(f"[早停检测] 训练在第 {actual_epochs}/{target_epochs} 轮早停完成")
+
             # 4. 训练结束，用权威的 results 对象回填最终指标
-            # 回调函数 on_train_epoch_end 中抓取的指标可能不完整（尤其是单轮训练时
             # 验证指标 mAP/Precision/Recall 尚未就绪），因此在此处用 YOLO 返回的最终结果覆盖，确保指标准确。
             try:
                 if results is not None:
@@ -342,7 +360,9 @@ class TrainingService:
                 dataset=dataset_name_clean,
                 parameters=json.dumps(params, ensure_ascii=False),
                 description=description,
-                final_metrics=final_metrics_json
+                final_metrics=final_metrics_json,
+                early_stopped=1 if training_state.get("early_stopped") else 0,
+                early_stop_epoch=training_state.get("early_stop_epoch", 0)
             )
 
             # D. 清理临时 runs 目录 (因为我们已经把产物迁移到了 models/trained 和 trainchart 里)
@@ -352,7 +372,10 @@ class TrainingService:
 
             # 更新状态为成功
             training_state["status"] = "success"
-            training_state["eta"] = "已完成"
+            if training_state.get("early_stopped"):
+                training_state["eta"] = f"早停完成 (第 {training_state['early_stop_epoch']}/{target_epochs} 轮)"
+            else:
+                training_state["eta"] = "已完成"
 
         except Exception as e:
             global stop_training_event
