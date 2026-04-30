@@ -31,6 +31,9 @@ training_state = {
 # 训练停止事件
 stop_training_event = threading.Event()
 
+# 训练状态读写锁（get_progress 在主线程读，训练线程在写）
+training_lock = threading.Lock()
+
 class TrainingService:
 
     def __init__(self):
@@ -92,21 +95,22 @@ class TrainingService:
         """
         启动后台训练线程
         """
-        if training_state["status"] == "training":
-            raise HTTPException(status_code=400, detail="已有训练任务正在进行，请稍后再试")
+        with training_lock:
+            if training_state["status"] == "training":
+                raise HTTPException(status_code=400, detail="已有训练任务正在进行，请稍后再试")
 
-        # 重置状态
-        training_state["model_name"] = model_name
-        training_state["status"] = "training"
-        training_state["progress"] = 0
-        training_state["total"] = int(params.get("epochs", 50))
-        training_state["metrics"] = {}
-        training_state["eta"] = "计算中..."
-        training_state["error_msg"] = ""
-        training_state["start_time"] = time.time()
-        training_state["last_epoch_time"] = time.time()
-        training_state["early_stopped"] = False
-        training_state["early_stop_epoch"] = 0
+            # 重置状态
+            training_state["model_name"] = model_name
+            training_state["status"] = "training"
+            training_state["progress"] = 0
+            training_state["total"] = int(params.get("epochs", 50))
+            training_state["metrics"] = {}
+            training_state["eta"] = "计算中..."
+            training_state["error_msg"] = ""
+            training_state["start_time"] = time.time()
+            training_state["last_epoch_time"] = time.time()
+            training_state["early_stopped"] = False
+            training_state["early_stop_epoch"] = 0
 
         # 重置停止事件
         global stop_training_event
@@ -168,19 +172,21 @@ class TrainingService:
             def _stop_now():
                 global stop_training_event
                 if stop_training_event.is_set():
-                    training_state["status"] = "stopped"
-                    training_state["error_msg"] = "训练被用户终止"
-                    training_state["eta"] = "已停止"
+                    with training_lock:
+                        training_state["status"] = "stopped"
+                        training_state["error_msg"] = "训练被用户终止"
+                        training_state["eta"] = "已停止"
                     raise RuntimeError("Training stopped by user")
             # 计算 ETA 的函数，根据每轮时间和剩余轮数估算
             def _compute_eta(current_epoch):
                 """根据已用 epoch 时间计算预计剩余时间"""
                 now = time.time()
-                epoch_time = now - training_state["last_epoch_time"]
-                training_state["last_epoch_time"] = now
+                with training_lock:
+                    epoch_time = now - training_state["last_epoch_time"]
+                    training_state["last_epoch_time"] = now
 
-                remaining_epochs = training_state["total"] - current_epoch
-                eta_seconds = int(epoch_time * remaining_epochs)
+                    remaining_epochs = training_state["total"] - current_epoch
+                    eta_seconds = int(epoch_time * remaining_epochs)
 
                 if eta_seconds > 3600:
                     return f"{eta_seconds // 3600}小时 {(eta_seconds % 3600) // 60}分钟"
@@ -219,9 +225,11 @@ class TrainingService:
             # 每epoch结束时更新进度和指标，并计算 ETA
             def on_train_epoch_end(trainer):
                 current_epoch = getattr(trainer, "epoch", 0) + 1
-                training_state["progress"] = current_epoch
-                training_state["metrics"] = _extract_metrics(trainer)
-                training_state["eta"] = _compute_eta(current_epoch)
+                eta = _compute_eta(current_epoch)
+                with training_lock:
+                    training_state["progress"] = current_epoch
+                    training_state["metrics"] = _extract_metrics(trainer)
+                    training_state["eta"] = eta
                 _stop_now()
 
             # 绑定回调
@@ -272,11 +280,13 @@ class TrainingService:
             results = model.train(**training_kwargs)
 
             # 检测是否早停完成：实际完成轮次 < 设定总轮次 说明 patience 触发了早停
-            actual_epochs = training_state["progress"]
-            target_epochs = training_state["total"]
+            with training_lock:
+                actual_epochs = training_state["progress"]
+                target_epochs = training_state["total"]
             if actual_epochs > 0 and actual_epochs < target_epochs:
-                training_state["early_stopped"] = True
-                training_state["early_stop_epoch"] = actual_epochs
+                with training_lock:
+                    training_state["early_stopped"] = True
+                    training_state["early_stop_epoch"] = actual_epochs
                 print(f"[早停检测] 训练在第 {actual_epochs}/{target_epochs} 轮早停完成")
 
             # 4. 训练结束，用权威的 results 对象回填最终指标
@@ -294,28 +304,30 @@ class TrainingService:
                             "Recall": _fuzzy_get(results_dict, ["recall(B)", "recall"], 0),
                         }
                         # 只覆盖为 0 或缺失的验证指标，保留回调中已有的损失值
-                        existing = training_state.get("metrics", {})
-                        for key, val in authoritative_metrics.items():
-                            if val > 0 and existing.get(key, 0) == 0:
-                                existing[key] = val
-                        training_state["metrics"] = existing
+                        with training_lock:
+                            existing = training_state.get("metrics", {})
+                            for key, val in authoritative_metrics.items():
+                                if val > 0 and existing.get(key, 0) == 0:
+                                    existing[key] = val
+                            training_state["metrics"] = existing
                         print(f"[训练指标回填] 使用 results 权威数据覆盖完毕: {training_state['metrics']}")
                     else:
                         # 兜底：尝试从 results.box 属性中获取
                         box = getattr(results, "box", None)
                         if box is not None:
-                            existing = training_state.get("metrics", {})
-                            fallback_map = {
-                                "mAP50": getattr(box, "map50", 0),
-                                "mAP50-95": getattr(box, "map", 0),
-                                "Precision": getattr(box, "mp", 0),
-                                "Recall": getattr(box, "mr", 0),
-                            }
-                            for key, val in fallback_map.items():
-                                val_f = round(float(val), 4) if val else 0
-                                if val_f > 0 and existing.get(key, 0) == 0:
-                                    existing[key] = val_f
-                            training_state["metrics"] = existing
+                            with training_lock:
+                                existing = training_state.get("metrics", {})
+                                fallback_map = {
+                                    "mAP50": getattr(box, "map50", 0),
+                                    "mAP50-95": getattr(box, "map", 0),
+                                    "Precision": getattr(box, "mp", 0),
+                                    "Recall": getattr(box, "mr", 0),
+                                }
+                                for key, val in fallback_map.items():
+                                    val_f = round(float(val), 4) if val else 0
+                                    if val_f > 0 and existing.get(key, 0) == 0:
+                                        existing[key] = val_f
+                                training_state["metrics"] = existing
                             print(f"[训练指标回填] 使用 results.box 兜底数据覆盖完毕: {training_state['metrics']}")
             except Exception as backfill_err:
                 print(f"[训练指标回填] 回填过程出现异常(不影响训练结果): {backfill_err}")
@@ -373,27 +385,30 @@ class TrainingService:
                 print(f"Successfully cleaned up temporary run directory: {run_dir}")
 
             # 更新状态为成功
-            training_state["status"] = "success"
-            if training_state.get("early_stopped"):
-                training_state["eta"] = f"早停完成 (第 {training_state['early_stop_epoch']}/{target_epochs} 轮)"
-            else:
-                training_state["eta"] = "已完成"
+            with training_lock:
+                training_state["status"] = "success"
+                if training_state.get("early_stopped"):
+                    training_state["eta"] = f"早停完成 (第 {training_state['early_stop_epoch']}/{target_epochs} 轮)"
+                else:
+                    training_state["eta"] = "已完成"
 
         except Exception as e:
             global stop_training_event
             if stop_training_event.is_set():
                 # 用户主动停止训练，不打印完整 traceback
                 print(f"Training stopped by user at epoch {training_state['progress']}/{training_state['total']}")
-                training_state["status"] = "stopped"
-                training_state["error_msg"] = "训练被用户终止"
-                training_state["eta"] = "已停止"
+                with training_lock:
+                    training_state["status"] = "stopped"
+                    training_state["error_msg"] = "训练被用户终止"
+                    training_state["eta"] = "已停止"
             else:
                 # 其他错误，打印 traceback 以便调试
                 import traceback
                 traceback.print_exc()
-                training_state["status"] = "error"
-                training_state["error_msg"] = str(e)
-                training_state["eta"] = "训练错误"
+                with training_lock:
+                    training_state["status"] = "error"
+                    training_state["error_msg"] = str(e)
+                    training_state["eta"] = "训练错误"
 
             # 训练失败/停止时也清理临时目录
             if os.path.exists(run_dir):
@@ -416,16 +431,18 @@ class TrainingService:
                 print(f"Warning: Failed to reload inference model: {reload_err}")
 
     def get_progress(self):
-        """前端获取进度的只读接口"""
-        return training_state
+        """前端获取进度的只读接口（加锁保证读到一致快照）"""
+        with training_lock:
+            return dict(training_state)
 
     def stop_training(self):
         """停止当前训练任务"""
         global stop_training_event
-        if training_state["status"] == "training":
-            stop_training_event.set()
-            return {"status": "success", "message": "停止训练信号已发送"}
-        else:
-            return {"status": "error", "message": "当前没有正在进行的训练任务"}
+        with training_lock:
+            if training_state["status"] == "training":
+                stop_training_event.set()
+                return {"status": "success", "message": "停止训练信号已发送"}
+            else:
+                return {"status": "error", "message": "当前没有正在进行的训练任务"}
 
 training_service = TrainingService()

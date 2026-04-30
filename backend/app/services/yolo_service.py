@@ -136,7 +136,7 @@ class YoloService:
         frame_count = 0
         try:
             # 流式处理
-            results = self.model.track(source=source_path, conf=conf, stream=True, persist=True)
+            results = self.model.predict(source=source_path, conf=conf, stream=True)
             
             for result in results:
                 frame_count += 1
