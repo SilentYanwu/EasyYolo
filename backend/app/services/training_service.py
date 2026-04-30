@@ -138,7 +138,7 @@ class TrainingService:
             # 1. 找到基础模型路径
             # 先猜 base_model 可能在哪个目录 (raw, yolo, trained)
             base_model_path = None
-            for category, dir_path in settings.MODEL_DIRS.items():
+            for dir_path in settings.MODEL_DIRS.values():
                 p = os.path.join(dir_path, base_model)
                 if os.path.exists(p):
                     base_model_path = p
@@ -172,42 +172,9 @@ class TrainingService:
                     training_state["error_msg"] = "训练被用户终止"
                     training_state["eta"] = "已停止"
                     raise RuntimeError("Training stopped by user")
-
-            def on_train_batch_start(trainer):
-                _ = trainer
-                _stop_now()
-
-            def on_train_epoch_end(trainer):
-                _stop_now()
-
-                current_epoch = getattr(trainer, "epoch", 0) + 1
-                training_state["progress"] = current_epoch
-
-                # 提取指标
-                # metrics 大致格式: {'metrics/mAP50(B)': 0.5, 'val/box_loss': 1.2, ...}
-                m = getattr(trainer, "metrics", {})
-
-                tloss = getattr(trainer, "tloss", [0, 0, 0])
-                if not isinstance(tloss, list) and not isinstance(tloss, tuple) and not type(tloss).__name__ == 'Tensor':
-                    tloss = [0, 0, 0] # 防御性编程
-
-                box_loss = round(float(tloss[0]), 4) if len(tloss) > 0 else 0.0
-                cls_loss = round(float(tloss[1]), 4) if len(tloss) > 1 else 0.0
-                dfl_loss = round(float(tloss[2]), 4) if len(tloss) > 2 else 0.0
-
-                # 使用模糊匹配，兼容不同 YOLO 版本的 key 名差异
-                parsed_metrics = {
-                    "mAP50": _fuzzy_get(m, ["mAP50(B)", "mAP50"], 0),
-                    "mAP50-95": _fuzzy_get(m, ["mAP50-95(B)", "mAP50-95"], 0),
-                    "Precision": _fuzzy_get(m, ["precision(B)", "precision"], 0),
-                    "Recall": _fuzzy_get(m, ["recall(B)", "recall"], 0),
-                    "Box Loss": box_loss,
-                    "Cls Loss": cls_loss,
-                    "Dfl Loss": dfl_loss,
-                }
-                training_state["metrics"] = parsed_metrics
-
-                # 计算 ETA
+            # 计算 ETA 的函数，根据每轮时间和剩余轮数估算
+            def _compute_eta(current_epoch):
+                """根据已用 epoch 时间计算预计剩余时间"""
                 now = time.time()
                 epoch_time = now - training_state["last_epoch_time"]
                 training_state["last_epoch_time"] = now
@@ -216,11 +183,46 @@ class TrainingService:
                 eta_seconds = int(epoch_time * remaining_epochs)
 
                 if eta_seconds > 3600:
-                    training_state["eta"] = f"{eta_seconds // 3600}小时 {(eta_seconds % 3600) // 60}分钟"
+                    return f"{eta_seconds // 3600}小时 {(eta_seconds % 3600) // 60}分钟"
                 elif eta_seconds > 60:
-                    training_state["eta"] = f"{eta_seconds // 60}分钟 {eta_seconds % 60}秒"
-                else:
-                    training_state["eta"] = f"{eta_seconds}秒"
+                    return f"{eta_seconds // 60}分钟 {eta_seconds % 60}秒"
+                return f"{eta_seconds}秒"
+            
+            # 提取训练指标
+            def _extract_metrics(trainer):
+                """从 trainer 中提取训练指标"""
+                m = getattr(trainer, "metrics", {})
+
+                tloss = getattr(trainer, "tloss", [0, 0, 0])
+                if not isinstance(tloss, list) and not isinstance(tloss, tuple) and not type(tloss).__name__ == 'Tensor':
+                    tloss = [0, 0, 0]
+
+                box_loss = round(float(tloss[0]), 4) if len(tloss) > 0 else 0.0
+                cls_loss = round(float(tloss[1]), 4) if len(tloss) > 1 else 0.0
+                dfl_loss = round(float(tloss[2]), 4) if len(tloss) > 2 else 0.0
+
+                return {
+                    "mAP50": _fuzzy_get(m, ["mAP50(B)", "mAP50"], 0),
+                    "mAP50-95": _fuzzy_get(m, ["mAP50-95(B)", "mAP50-95"], 0),
+                    "Precision": _fuzzy_get(m, ["precision(B)", "precision"], 0),
+                    "Recall": _fuzzy_get(m, ["recall(B)", "recall"], 0),
+                    "Box Loss": box_loss,
+                    "Cls Loss": cls_loss,
+                    "Dfl Loss": dfl_loss,
+                }
+
+            # 回调函数中每batch开始的时候检查是否需要停止训练
+            def on_train_batch_start(trainer):
+                _ = trainer
+                _stop_now()
+
+            # 每epoch结束时更新进度和指标，并计算 ETA
+            def on_train_epoch_end(trainer):
+                current_epoch = getattr(trainer, "epoch", 0) + 1
+                training_state["progress"] = current_epoch
+                training_state["metrics"] = _extract_metrics(trainer)
+                training_state["eta"] = _compute_eta(current_epoch)
+                _stop_now()
 
             # 绑定回调
             model.add_callback("on_train_batch_start", on_train_batch_start)

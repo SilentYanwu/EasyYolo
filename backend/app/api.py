@@ -304,6 +304,25 @@ def stop_training():
     """停止当前正在进行的训练任务"""
     return training_service.stop_training()
 
+@app.get("/datasets")
+def list_datasets():
+    """返回已有数据集列表（名称 + 含 data.yaml 的路径），供前端上传前检查重名"""
+    datasets_dir = settings.DATASETS_DIR
+    if not os.path.exists(datasets_dir):
+        return {"datasets": []}
+    result = []
+    for d in os.listdir(datasets_dir):
+        dir_path = os.path.join(datasets_dir, d)
+        if not os.path.isdir(dir_path):
+            continue
+        data_yaml_dir = dir_path
+        for root, _dirs, files in os.walk(dir_path):
+            if "data.yaml" in files:
+                data_yaml_dir = root
+                break
+        result.append({"name": d, "path": data_yaml_dir.replace("\\", "/")})
+    return {"datasets": result}
+
 @app.get("/training_history/{model_name}")
 def get_training_history(model_name: str):
     """获取某个模型的详细训练记录"""

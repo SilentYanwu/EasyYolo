@@ -194,18 +194,66 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* 警告模态框特殊样式 */
-#warningModal .modal-content::before {
-    background: linear-gradient(90deg, #ff9800, #ffc107);
+/* 通用消息模态框 — 颜色变体 */
+
+/* info（蓝色，默认） */
+#messageModal.info .modal-content::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+#messageModal.info .modal-content h3 { color: #3b82f6; }
+#messageModal.info .btn.primary { background: #3b82f6; color: #fff; }
+#messageModal.info .btn.primary:hover { background: #2563eb; }
+
+/* warning（橙色） */
+#messageModal.warning .modal-content::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+#messageModal.warning .modal-content h3 { color: #d97706; }
+#messageModal.warning .btn.primary { background: #f59e0b; color: #fff; }
+#messageModal.warning .btn.primary:hover { background: #d97706; }
+
+/* success（绿色） */
+#messageModal.success .modal-content::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+#messageModal.success .modal-content h3 { color: #059669; }
+#messageModal.success .btn.primary { background: #10b981; color: #fff; }
+#messageModal.success .btn.primary:hover { background: #059669; }
+
+/* 确认型双按钮布局：取消在左，确认在右 */
+#messageModalCancelBtn {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+#messageModalCancelBtn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
 }
 
-#warningModal .modal-content h3 {
-    color: #ff9800;
+#messageModalNoBtn {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
 }
-
-#warningModal .btn.primary:hover {
-    background: #f57c00;
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+#messageModalNoBtn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #475569;
 }
 
 /* 训练参数大型模态框特殊样式 */

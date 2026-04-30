@@ -457,13 +457,15 @@
         </div>
     </div>
 
-    <!-- 警告模态框 -->
-    <div id="warningModal" class="modal hidden">
+    <!-- 通用消息模态框（info=蓝 / warning=橙 / success=绿） -->
+    <div id="messageModal" class="modal hidden">
         <div class="modal-content">
-            <h3>⚠️ 警告</h3>
-            <p id="warningMessage">单次最多支持 99 张图片</p>
+            <h3 id="messageModalTitle">提示</h3>
+            <p id="messageModalText"></p>
             <div class="modal-actions">
-                <button onclick="closeWarningModal()" class="btn primary">知道了</button>
+                <button id="messageModalCancelBtn">取消</button>
+                <button id="messageModalNoBtn">否</button>
+                <button id="messageModalConfirmBtn" class="btn primary">确定</button>
             </div>
         </div>
     </div>
@@ -679,40 +681,6 @@
         </div>
     </template>
 
-    <!-- 队列停止确认模态框 -->
-    <div id="stopQueueModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>确认停止队列</h3>
-            <p>停止后将终止当前训练，所有任务重置为未开始。确定吗？</p>
-            <div class="modal-actions">
-                <button onclick="closeStopQueueModal()">取消</button>
-                <button onclick="confirmStopQueue()" class="btn primary">确定停止</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 任务失败提示模态框 -->
-    <div id="taskFailedModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>任务失败</h3>
-            <p id="taskFailedMessage">任务 X 失败，队列已停止</p>
-            <div class="modal-actions">
-                <button onclick="closeTaskFailedModal()" class="btn primary">确定</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 切换模式确认模态框 -->
-    <div id="switchModeModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>切换训练模式</h3>
-            <p id="switchModeMessage">切换至单任务模式将清空当前多任务队列，是否继续？</p>
-            <div class="modal-actions">
-                <button onclick="cancelSwitchMode()">取消</button>
-                <button onclick="confirmSwitchMode()" class="btn primary">确认切换</button>
-            </div>
-        </div>
-    </div>
 
     <script type="module" src="js/main.js"></script>
 </body>

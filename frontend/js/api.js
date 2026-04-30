@@ -112,6 +112,14 @@ export const api = {
     },
 
     /**
+     * 获取已有数据集列表
+     */
+    async getDatasets() {
+        const res = await fetch(`${API_BASE}/datasets`);
+        return await res.json();
+    },
+
+    /**
      * 上传并解压数据集
      */
     async uploadDataset(file) {

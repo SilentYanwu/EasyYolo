@@ -25,8 +25,8 @@ def run_server():
         print(f"❌ 错误: 找不到前端目录 {FRONTEND_DIR}")
         return
 
-    # 生成10个可用端口列表
-    available_ports = list(range(PORT, PORT + 10))
+    # 生成20个可用端口列表
+    available_ports = list(range(PORT, PORT + 20))
     # 随机打乱端口顺序
     random.shuffle(available_ports)
     
@@ -45,7 +45,7 @@ def run_server():
             continue
 
     if not httpd:
-        print(f"❌ 错误: 无法启动服务器，端口范围 {PORT}-{PORT+9} 均被占用。请手动关闭占用端口的进程，或更改 PORT 变量。")
+        print(f"❌ 错误: 无法启动服务器，端口范围 {PORT}-{PORT+19} 均被占用。请手动关闭占用端口的进程，或更改 PORT 变量。")
         return
 
     print(f"🚀 EasyYolo 前端服务器启动成功！")

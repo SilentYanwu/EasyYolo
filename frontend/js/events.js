@@ -41,6 +41,88 @@ const trainParams=  {
         };
 
 /**
+ * 通用消息弹窗 —— 替换所有原生 alert
+ * @param {string} msg 消息内容
+ * @param {'info'|'warning'|'success'} type 类型: info=蓝 warning=橙 success=绿
+ * @param {Function} [onOk] 点击确定后的回调
+ */
+function showMessage(msg, type = 'info', onOk) {
+    const modal = document.getElementById('messageModal');
+    modal.className = 'modal hidden';
+    modal.classList.add(type);
+
+    const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
+    const titles = { success: '成功', warning: '警告', info: '提示' };
+    document.getElementById('messageModalTitle').textContent = `${icons[type]} ${titles[type]}`;
+    document.getElementById('messageModalText').textContent = msg;
+
+    const cancelBtn = document.getElementById('messageModalCancelBtn');
+    const noBtn = document.getElementById('messageModalNoBtn');
+    const confirmBtn = document.getElementById('messageModalConfirmBtn');
+    cancelBtn.style.display = 'none';
+    noBtn.style.display = 'none';
+    confirmBtn.textContent = '确定';
+    confirmBtn.onclick = () => { modal.classList.add('hidden'); if (onOk) onOk(); };
+
+    modal.classList.remove('hidden');
+}
+
+/**
+ * 通用确认弹窗 —— 替换原生 confirm
+ * @param {string} msg 消息内容
+ * @param {'info'|'warning'|'success'} type
+ * @param {Function} onConfirm 确认回调
+ * @param {Function} [onCancel] 取消回调
+ */
+function showConfirm(msg, type = 'warning', onConfirm, onCancel) {
+    const modal = document.getElementById('messageModal');
+    modal.className = 'modal hidden';
+    modal.classList.add(type);
+
+    const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
+    document.getElementById('messageModalTitle').textContent = `${icons[type]} 确认`;
+    document.getElementById('messageModalText').textContent = msg;
+
+    const cancelBtn = document.getElementById('messageModalCancelBtn');
+    const noBtn = document.getElementById('messageModalNoBtn');
+    const confirmBtn = document.getElementById('messageModalConfirmBtn');
+    cancelBtn.style.display = '';
+    noBtn.style.display = 'none';
+    confirmBtn.textContent = '确定';
+    confirmBtn.onclick = () => { modal.classList.add('hidden'); onConfirm(); };
+    cancelBtn.onclick = () => { modal.classList.add('hidden'); if (onCancel) onCancel(); };
+
+    modal.classList.remove('hidden');
+}
+
+/**
+ * 三选确认弹窗 —— 是 / 否 / 取消
+ */
+function showThreeChoice(msg, type, confirmText, onConfirm, noText, onNo, cancelText, onCancel) {
+    const modal = document.getElementById('messageModal');
+    modal.className = 'modal hidden';
+    modal.classList.add(type);
+
+    const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
+    document.getElementById('messageModalTitle').textContent = `${icons[type]} 确认`;
+    document.getElementById('messageModalText').textContent = msg;
+
+    const cancelBtn = document.getElementById('messageModalCancelBtn');
+    const noBtn = document.getElementById('messageModalNoBtn');
+    const confirmBtn = document.getElementById('messageModalConfirmBtn');
+    cancelBtn.style.display = '';
+    noBtn.style.display = '';
+    cancelBtn.textContent = cancelText;
+    noBtn.textContent = noText;
+    confirmBtn.textContent = confirmText;
+    confirmBtn.onclick = () => { modal.classList.add('hidden'); onConfirm(); };
+    noBtn.onclick = () => { modal.classList.add('hidden'); onNo(); };
+    cancelBtn.onclick = () => { modal.classList.add('hidden'); if (onCancel) onCancel(); };
+
+    modal.classList.remove('hidden');
+}
+
+/**
  * 绑定页面所有事件处理函数
  * 包括导航切换、文件上传、识别处理、视频控制、弹窗管理等功能
  */
@@ -54,8 +136,7 @@ export function bindEvents() {
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
         if (files.length > 99) {
-            dom.warningMessage.innerText = `单次最多支持 99 张图片，您选择了 ${files.length} 张`;
-            dom.warningModal.classList.remove('hidden');
+            showMessage(`单次最多支持 99 张图片，您选择了 ${files.length} 张`, 'warning');
             return;
         }
         selectedFiles = files;
@@ -130,7 +211,6 @@ export function bindEvents() {
     window.closeDeleteModal = () => dom.deleteModal.classList.add('hidden');
     window.closeClearHistoryModal = () => dom.clearHistoryModal.classList.add('hidden');
     window.closeDeleteHistoryModal = () => dom.deleteHistoryModal.classList.add('hidden');
-    window.closeWarningModal = () => dom.warningModal.classList.add('hidden');
     window.uploadModel = handleModelUpload; // 修正命名以匹配 HTML
     window.confirmRename = handleModelRename;
     window.confirmDelete = handleModelDelete;
@@ -151,11 +231,11 @@ export function bindEvents() {
             const params = collectTrainingParams();
             multiTaskManager.updateTask(taskIndex, { parameters: params });
             window.closeTrainingParamsModal();
-            alert(`训练参数已保存到任务${taskIndex + 1}`);
+            showMessage(`训练参数已保存到任务${taskIndex + 1}`, 'success');
             return;
         }
         window.closeTrainingParamsModal();
-        alert('训练参数已记录');
+        showMessage('训练参数已记录', 'success');
     };
     window.startTraining = handleStartTraining;
 
@@ -176,11 +256,6 @@ export function bindEvents() {
     window.deleteTask = deleteTask;
     window.startQueueTraining = startQueueTraining;
     window.stopQueueTraining = stopQueueTraining;
-    window.closeStopQueueModal = closeStopQueueModal;
-    window.confirmStopQueue = confirmStopQueue;
-    window.closeTaskFailedModal = closeTaskFailedModal;
-    window.cancelSwitchMode = cancelSwitchMode;
-    window.confirmSwitchMode = confirmSwitchMode;
 
     // 初始化多任务管理器
     multiTaskManager.init();
@@ -254,9 +329,9 @@ export function bindEvents() {
                 window.closeEditDescriptionModal();
                 await loadModelDetails(name); // 重新加载详情以显示新介绍
             } else {
-                alert('修改失败');
+                showMessage('修改失败', 'warning');
             }
-        } catch (e) { alert('请求出错'); }
+        } catch (e) { showMessage('请求出错', 'warning'); }
     };
     } catch (e) {
         console.error('bindEvents error:', e);
@@ -338,7 +413,7 @@ const multiTaskManager = {
     // 添加新任务
     addTask() {
         if (this.tasks.length >= MAX_TRAINING_TASKS) {
-            alert(`最多支持${MAX_TRAINING_TASKS}个任务`);
+            showMessage(`最多支持${MAX_TRAINING_TASKS}个任务`, 'warning');
             return false;
         }
 
@@ -352,7 +427,7 @@ const multiTaskManager = {
     // 删除任务
     deleteTask(index) {
         if (this.isQueueRunning) {
-            alert('队列运行中，请先停止');
+            showMessage('队列运行中，请先停止', 'warning');
             return false;
         }
 
@@ -361,7 +436,7 @@ const multiTaskManager = {
         // 检查是否有后续任务依赖此任务
         for (let i = index + 1; i < this.tasks.length; i++) {
             if (this.tasks[i].modelSource === 'previous') {
-                alert(`任务${i+1}的模型来源指向已删除的任务，请重新选择模型来源`);
+                showMessage(`任务${i+1}的模型来源指向已删除的任务，请重新选择模型来源`, 'warning');
                 // 将依赖任务改为使用现有模型
                 this.tasks[i].modelSource = 'existing';
                 this.tasks[i].baseModel = '';
@@ -400,7 +475,7 @@ const multiTaskManager = {
     async startQueue() {
         if (this.isQueueRunning) return false;
         if (this.tasks.length === 0) {
-            alert('请至少添加一个任务');
+            showMessage('请至少添加一个任务', 'warning');
             return false;
         }
 
@@ -408,15 +483,15 @@ const multiTaskManager = {
         for (let i = 0; i < this.tasks.length; i++) {
             const task = this.tasks[i];
             if (!task.newModelName.trim()) {
-                alert(`任务${i+1}的新模型名称不能为空`);
+                showMessage(`任务${i+1}的新模型名称不能为空`, 'warning');
                 return false;
             }
             if (!task.datasetPath) {
-                alert(`任务${i+1}的数据集未上传`);
+                showMessage(`任务${i+1}的数据集未上传`, 'warning');
                 return false;
             }
             if (task.modelSource === 'existing' && !task.baseModel) {
-                alert(`任务${i+1}的基础模型未选择`);
+                showMessage(`任务${i+1}的基础模型未选择`, 'warning');
                 return false;
             }
         }
@@ -639,7 +714,7 @@ export async function handleModelSwitch(name, category) {
             state.currentCategory = category;
             await refreshApp();
         }
-    } catch (e) { alert('切换失败'); }
+    } catch (e) { showMessage('切换失败', 'warning'); }
 }
 
 async function handleModelUpload() {
@@ -650,7 +725,7 @@ async function handleModelUpload() {
         await api.uploadModel(file, name);
         window.closeUploadModal();
         refreshApp();
-    } catch (e) { alert('上传失败'); }
+    } catch (e) { showMessage('上传失败', 'warning'); }
 }
 
 async function handleModelRename() {
@@ -660,7 +735,7 @@ async function handleModelRename() {
         await api.renameModel(dom.oldNameHidden.value, newName, dom.categoryHidden.value);
         window.closeRenameModal();
         refreshApp();
-    } catch (e) { alert('重命名失败'); }
+    } catch (e) { showMessage('重命名失败', 'warning'); }
 }
 
 function openDeleteModal(modelName, category) {
@@ -698,7 +773,7 @@ async function handleModelDelete() {
         await api.deleteModel(modelName, category);
         window.closeDeleteModal();
         refreshApp();
-    } catch (e) { alert('删除失败'); }
+    } catch (e) { showMessage('删除失败', 'warning'); }
 }
 
 /**
@@ -741,7 +816,7 @@ async function confirmClearHistoryAction() {
         await api.clearHistory(state.currentModelName);
         window.closeClearHistoryModal();
         refreshHistory();
-    } catch (e) { alert('清空失败'); }
+    } catch (e) { showMessage('清空失败', 'warning'); }
 }
 
 /**
@@ -753,7 +828,7 @@ async function handleDeleteHistoryItem() {
         await api.deleteHistoryItem(recordId);
         window.closeDeleteHistoryModal();
         refreshHistory();
-    } catch (e) { alert('删除失败'); }
+    } catch (e) { showMessage('删除失败', 'warning'); }
 }
 
 /**
@@ -910,6 +985,33 @@ async function handleDatasetUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    const datasetName = file.name.replace(/\.zip$/i, '');
+
+    // 检查是否已有同名数据集
+    try {
+        const { datasets } = await api.getDatasets();
+        const existing = datasets && datasets.find(d => d.name === datasetName);
+        if (existing) {
+            showThreeChoice(
+                `数据集 "${datasetName}" 已存在，请选择处理方式：`,
+                'warning',
+                '是，覆盖', () => doUploadDataset(file, e.target),
+                '否，直接用', () => {
+                    uploadedDatasetPath = existing.path;
+                    dom.trainDatasetName.innerText = `[就绪] ${datasetName} (使用已有)`;
+                    dom.trainDatasetName.style.color = '#4ade80';
+                    e.target.value = '';
+                },
+                '取消', () => { e.target.value = ''; }
+            );
+            return;
+        }
+    } catch (_) { /* 检查失败不影响上传 */ }
+
+    doUploadDataset(file, e.target);
+}
+
+async function doUploadDataset(file, inputEl) {
     dom.trainDatasetName.innerText = '上传并解压中...';
     dom.uploadDatasetBtn.disabled = true;
 
@@ -925,10 +1027,10 @@ async function handleDatasetUpload(e) {
             throw new Error(data.detail || '未知错误');
         }
     } catch (err) {
-        alert(err.message);
+        showMessage(err.message, 'warning');
         dom.trainDatasetName.innerText = '上传失败/格式错误';
         dom.trainDatasetName.style.color = '#f87171';
-        dom.trainDatasetInput.value = '';
+        inputEl.value = '';
     } finally {
         dom.uploadDatasetBtn.disabled = false;
     }
@@ -1016,9 +1118,9 @@ async function handleStartTraining() {
     const newModelName = dom.trainNewModelName.value.trim();
     const modelDescription = document.getElementById('trainModelDescription').value.trim();
 
-    if (!baseModel) return alert("请先选择基础模型！");
-    if (!newModelName) return alert("请填写新模型名称！");
-    if (!uploadedDatasetPath) return alert("请先上传并成功解析您的训练集 (zip压缩包包括data.yaml)！");
+    if (!baseModel) return showMessage("请先选择基础模型！", 'warning');
+    if (!newModelName) return showMessage("请填写新模型名称！", 'warning');
+    if (!uploadedDatasetPath) return showMessage("请先上传并成功解析您的训练集 (zip压缩包包括data.yaml)！", 'warning');
 
     const params = collectTrainingParams();
     dom.startTrainBtn.disabled = true;
@@ -1036,15 +1138,15 @@ async function handleStartTraining() {
         const res = await api.startTraining(newModelName, baseModel, uploadedDatasetPath, params, modelDescription);
         const data = await res.json();
         if (res.ok) {
-            alert('训练任务已在后台启动！您可以从进度面板查看。');
+            showMessage('训练任务已在后台启动！您可以从进度面板查看。', 'success');
             // 训练已启动，更新按钮为停止训练
             updateTrainButton('training');
             state.lastTrainingStatus = 'training';
         } else {
-            alert(data.detail || '启动训练失败');
+            showMessage(data.detail || '启动训练失败', 'warning');
         }
     } catch (e) {
-        alert('启动训练出错: ' + e.message);
+        showMessage('启动训练出错: ' + e.message, 'warning');
     } finally {
         // 如果启动失败，恢复按钮
         if (state.lastTrainingStatus !== 'training') {
@@ -1057,23 +1159,21 @@ async function handleStartTraining() {
 
 // 处理停止训练
 async function handleStopTraining() {
-    if (!confirm('确定要停止当前训练吗？停止后无法恢复。')) return;
+    showConfirm('确定要停止当前训练吗？停止后无法恢复。', 'warning', async () => {
+        dom.startTrainBtn.disabled = true;
+        dom.startTrainBtn.innerText = '停止中...';
 
-    dom.startTrainBtn.disabled = true;
-    dom.startTrainBtn.innerText = '停止中...';
-
-    try {
-        const result = await api.stopTraining();
-        if (result.status === 'success') {
-            alert('已发送停止训练信号，训练将尽快终止。');
-        } else {
-            alert('停止训练失败: ' + result.message);
+        try {
+            const result = await api.stopTraining();
+            if (result.status === 'success') {
+                showMessage('已发送停止训练信号，训练将尽快终止。', 'info');
+            } else {
+                showMessage('停止训练失败: ' + result.message, 'warning');
+            }
+        } catch (e) {
+            showMessage('请求出错: ' + e.message, 'warning');
         }
-    } catch (e) {
-        alert('请求出错: ' + e.message);
-    } finally {
-        // 按钮状态将由轮询器根据训练状态更新
-    }
+    });
 }
 
 // 根据训练状态更新按钮
@@ -1138,22 +1238,24 @@ function startTrainingPoller() {
                 state.lastTrainingStatus = 'success';
                 // 多任务队列运行中，由 waitForTaskCompletion 统一处理队列流转
                 if (!isMultiQueueRunning) {
-                    if (data.early_stopped) {
-                        alert(`🎉 训练早停完成！新模型 "${data.model_name}" 已就绪。\n早停轮次: 第 ${data.early_stop_epoch}/${data.total} 轮 (连续多轮指标无提升，自动停止)\n点击确认后将刷新页面以加载最新数据。`);
-                    } else {
-                        alert(`🎉 训练完成！新模型 "${data.model_name}" 已就绪。\n点击确认后将刷新页面以加载最新数据。`);
-                    }
-                    window.location.reload();
+                    const emoji = data.early_stopped ? '🎉' : '🎉';
+                    const detail = data.early_stopped
+                        ? `早停轮次: 第 ${data.early_stop_epoch}/${data.total} 轮 (连续多轮指标无提升，自动停止)`
+                        : '';
+                    const msg = data.early_stopped
+                        ? `训练早停完成！新模型 "${data.model_name}" 已就绪。\n${detail}`
+                        : `训练完成！新模型 "${data.model_name}" 已就绪。`;
+                    showMessage(msg, 'success', () => window.location.reload());
                 }
             } else if (state.lastTrainingStatus === 'training' && data.status === 'error') {
                 state.lastTrainingStatus = 'error';
                 if (!isMultiQueueRunning) {
-                    alert(`❌ 训练出错：${data.error_msg || '未知错误'}`);
+                    showMessage(`训练出错：${data.error_msg || '未知错误'}`, 'warning');
                 }
             } else if (state.lastTrainingStatus === 'training' && data.status === 'stopped') {
                 state.lastTrainingStatus = 'stopped';
                 if (!isMultiQueueRunning) {
-                    alert('训练已停止。');
+                    showMessage('训练已停止。', 'info');
                 }
             } else {
                 // 平时同步状态
@@ -1173,11 +1275,11 @@ async function loadModelDetails(modelName) {
             ui.renderModelDetails(res.data);
         } else {
             ui.renderModelDetails(null);
-            alert(res.detail || '未找到该模型的训练记录');
+            showMessage(res.detail || '未找到该模型的训练记录', 'warning');
         }
     } catch (e) {
         ui.renderModelDetails(null);
-        alert('获取历史记录失败: ' + e.message);
+        showMessage('获取历史记录失败: ' + e.message, 'warning');
     }
 }
 
@@ -1188,16 +1290,15 @@ async function loadModelDetails(modelName) {
 // 模式切换
 function switchTrainingMode(mode) {
     if (mode === 'multi' && (state.lastTrainingStatus === 'training' || multiTaskManager.isQueueRunning)) {
-        alert('当前有训练任务正在进行，请先停止训练');
+        showMessage('当前有训练任务正在进行，请先停止训练', 'warning');
         return;
     }
 
     if (mode === 'single' && multiTaskManager.tasks.length > 0) {
         // 从多任务切换到单任务，需要确认
-        document.getElementById('switchModeMessage').textContent =
-            '切换至单任务模式将清空当前多任务队列，是否继续？';
-        document.getElementById('switchModeModal').classList.remove('hidden');
-        window.pendingModeSwitch = mode;
+        showConfirm('切换至单任务模式将清空当前多任务队列，是否继续？', 'warning', () => {
+            applyTrainingMode(mode, true);
+        });
         return;
     }
 
@@ -1430,12 +1531,12 @@ function updateModelSourceDisplay(taskCard, modelSource) {
 // 添加训练任务
 function addTrainingTask() {
     if (multiTaskManager.isQueueRunning) {
-        alert('队列运行中，请先停止');
+        showMessage('队列运行中，请先停止', 'warning');
         return;
     }
 
     if (multiTaskManager.tasks.length >= 6) {
-        alert('最多支持6个任务');
+        showMessage('最多支持6个任务', 'warning');
         return;
     }
 
@@ -1465,10 +1566,46 @@ async function handleMultiTaskDatasetUpload(e, taskIndex) {
     const file = e.target.files[0];
     if (!file) return;
 
+    const datasetName = file.name.replace(/\.zip$/i, '');
+
+    // 检查是否已有同名数据集
+    try {
+        const { datasets } = await api.getDatasets();
+        const existing = datasets && datasets.find(d => d.name === datasetName);
+        if (existing) {
+            showThreeChoice(
+                `数据集 "${datasetName}" 已存在，请选择处理方式：`,
+                'warning',
+                '是，覆盖', () => doMultiTaskUpload(file, taskIndex, e.target),
+                '否，直接用', () => {
+                    multiTaskManager.updateTask(taskIndex, {
+                        datasetPath: existing.path,
+                        datasetName: `[就绪] ${datasetName} (使用已有)`
+                    });
+                    const taskCard = document.querySelector(`.task-card[data-task-index="${taskIndex}"]`);
+                    if (taskCard) {
+                        const datasetNameEl = taskCard.querySelector('.dataset-name');
+                        if (datasetNameEl) {
+                            datasetNameEl.textContent = `[就绪] ${datasetName} (使用已有)`;
+                            datasetNameEl.style.color = '#4ade80';
+                        }
+                    }
+                    e.target.value = '';
+                },
+                '取消', () => { e.target.value = ''; }
+            );
+            return;
+        }
+    } catch (_) { /* 检查失败不影响上传 */ }
+
+    doMultiTaskUpload(file, taskIndex, e.target);
+}
+
+async function doMultiTaskUpload(file, taskIndex, inputEl) {
     const taskCard = document.querySelector(`.task-card[data-task-index="${taskIndex}"]`);
-    const datasetName = taskCard.querySelector('.dataset-name');
-    datasetName.textContent = '上传并解压中...';
-    datasetName.style.color = '#fbbf24';
+    const datasetNameEl = taskCard.querySelector('.dataset-name');
+    datasetNameEl.textContent = '上传并解压中...';
+    datasetNameEl.style.color = '#fbbf24';
 
     try {
         const res = await api.uploadDataset(file);
@@ -1480,16 +1617,16 @@ async function handleMultiTaskDatasetUpload(e, taskIndex) {
                 datasetName: `[就绪] ${file.name}`
             });
 
-            datasetName.textContent = `[就绪] ${file.name}`;
-            datasetName.style.color = '#4ade80';
+            datasetNameEl.textContent = `[就绪] ${file.name}`;
+            datasetNameEl.style.color = '#4ade80';
         } else {
             throw new Error(data.detail || '未知错误');
         }
     } catch (err) {
-        alert(err.message);
-        datasetName.textContent = '上传失败/格式错误';
-        datasetName.style.color = '#f87171';
-        e.target.value = '';
+        showMessage(err.message, 'warning');
+        datasetNameEl.textContent = '上传失败/格式错误';
+        datasetNameEl.style.color = '#f87171';
+        inputEl.value = '';
 
         multiTaskManager.updateTask(taskIndex, {
             datasetPath: '',
@@ -1516,7 +1653,7 @@ function openMultiTaskParamsModal(taskIndex) {
 async function startQueueTraining() {
     if (multiTaskManager.isQueueRunning) {
         // 如果是运行中，点击则停止
-        document.getElementById('stopQueueModal').classList.remove('hidden');
+        showConfirm('停止后将终止当前训练，所有任务重置为未开始。确定吗？', 'warning', confirmStopQueue);
         return;
     }
 
@@ -1534,7 +1671,7 @@ async function executeNextTaskInQueue() {
     const currentTask = multiTaskManager.getCurrentTask();
     if (!currentTask) {
         // 所有任务完成
-        alert('所有训练任务已完成！');
+        showMessage('所有训练任务已完成！', 'success');
         updateQueueControls();
         return;
     }
@@ -1580,9 +1717,7 @@ async function executeNextTaskInQueue() {
         // 任务失败
         multiTaskManager.taskFailed(multiTaskManager.currentTaskIndex, error.message);
 
-        document.getElementById('taskFailedMessage').textContent =
-            `任务 ${multiTaskManager.currentTaskIndex + 1} 失败: ${error.message}`;
-        document.getElementById('taskFailedModal').classList.remove('hidden');
+        showMessage(`任务 ${multiTaskManager.currentTaskIndex + 1} 失败: ${error.message}`, 'warning');
 
         updateQueueControls();
         renderTaskList();
@@ -1600,9 +1735,10 @@ async function waitForTaskCompletion() {
                     clearInterval(checkInterval);
 
                     // 更新当前任务状态
+                    const completedTaskIndex = multiTaskManager.currentTaskIndex;
                     const currentTask = multiTaskManager.getCurrentTask();
                     if (currentTask) {
-                        multiTaskManager.updateTask(multiTaskManager.currentTaskIndex, {
+                        multiTaskManager.updateTask(completedTaskIndex, {
                             status: 'completed',
                             progress: data.progress || currentTask.totalEpochs,
                             totalEpochs: data.total || currentTask.totalEpochs
@@ -1615,9 +1751,12 @@ async function waitForTaskCompletion() {
 
                     if (multiTaskManager.isQueueRunning) {
                         // 继续执行下一个任务
+                        state.lastTrainingStatus = 'training';  // 保持，防止 poller 弹出单任务完成
                         executeNextTaskInQueue();
                     } else {
                         // 队列完成
+                        state.lastTrainingStatus = 'success';   // 阻止 poller 重复弹窗
+                        showMessage('所有训练任务已完成！', 'success');
                         updateQueueControls();
                     }
 
@@ -1634,9 +1773,7 @@ async function waitForTaskCompletion() {
                     // 任务失败
                     multiTaskManager.taskFailed(multiTaskManager.currentTaskIndex, errorMsg);
 
-                    document.getElementById('taskFailedMessage').textContent =
-                        `任务 ${multiTaskManager.currentTaskIndex + 1} 失败: ${errorMsg}`;
-                    document.getElementById('taskFailedModal').classList.remove('hidden');
+                    showMessage(`任务 ${multiTaskManager.currentTaskIndex + 1} 失败: ${errorMsg}`, 'warning');
 
                     updateQueueControls();
                     renderTaskList();
@@ -1654,19 +1791,16 @@ async function waitForTaskCompletion() {
 // 停止队列训练
 function stopQueueTraining() {
     if (!multiTaskManager.isQueueRunning) return;
-
-    document.getElementById('stopQueueModal').classList.remove('hidden');
+    showConfirm('停止后将终止当前训练，所有任务重置为未开始。确定吗？', 'warning', confirmStopQueue);
 }
 
 // 确认停止队列
 async function confirmStopQueue() {
-    document.getElementById('stopQueueModal').classList.add('hidden');
-
     // 停止当前训练
     try {
         const result = await api.stopTraining();
         if (result.status !== 'success') {
-            alert('停止训练失败: ' + result.message);
+            showMessage('停止训练失败: ' + result.message, 'warning');
         }
     } catch (e) {
         console.error('停止训练请求失败:', e);
@@ -1701,25 +1835,3 @@ function updateQueueControls() {
     }
 }
 
-// 模态框控制函数
-function closeStopQueueModal() {
-    document.getElementById('stopQueueModal').classList.add('hidden');
-}
-
-function closeTaskFailedModal() {
-    document.getElementById('taskFailedModal').classList.add('hidden');
-}
-
-function cancelSwitchMode() {
-    document.getElementById('switchModeModal').classList.add('hidden');
-    delete window.pendingModeSwitch;
-}
-
-function confirmSwitchMode() {
-    document.getElementById('switchModeModal').classList.add('hidden');
-    if (window.pendingModeSwitch) {
-        // 确认切换模式时，需要清空队列
-        applyTrainingMode(window.pendingModeSwitch, true);
-        delete window.pendingModeSwitch;
-    }
-}
