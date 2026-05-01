@@ -98,7 +98,11 @@ export const dom = {
 
     // 最终训练指标面板
     finalMetricsSection: document.getElementById('finalMetricsSection'),
-    detailsFinalMetricsGrid: document.getElementById('detailsFinalMetricsGrid')
+    detailsFinalMetricsGrid: document.getElementById('detailsFinalMetricsGrid'),
+
+    // 每类评估指标表格
+    evalTableSection: document.getElementById('evalTableSection'),
+    detailsEvalTableContainer: document.getElementById('detailsEvalTableContainer')
 };
 
 /**

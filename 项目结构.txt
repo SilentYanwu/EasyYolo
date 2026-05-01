@@ -1,11 +1,13 @@
 ============================================================
 项目结构: EasyYolo
-生成时间: 2026-04-22 15:10:13
-统计信息: 32 个文件夹, 73 个文件
+生成时间: 2026-05-01 16:00:41
+统计信息: 33 个文件夹, 78 个文件
 ============================================================
 
 EasyYolo/
 ├── .claude/
+│   ├── worktrees/
+│   └── settings.local.json (73.0 B)
 ├── backend/
 │   ├── app/
 │   │   ├── core/
@@ -13,12 +15,12 @@ EasyYolo/
 │   │   │   └── config.py (1.8 KB)
 │   │   ├── services/
 │   │   │   ├── __init__.py (0 B)
-│   │   │   ├── db_service.py (11.8 KB)
+│   │   │   ├── db_service.py (13.6 KB)
 │   │   │   ├── inference_service.py (6.6 KB)
-│   │   │   ├── training_service.py (19.6 KB)
+│   │   │   ├── training_service.py (35.3 KB)
 │   │   │   └── yolo_service.py (5.7 KB)
 │   │   ├── __init__.py (0 B)
-│   │   ├── api.py (11.0 KB)
+│   │   ├── api.py (11.7 KB)
 │   │   └── openh264-1.8.0-win64.dll (805.8 KB)
 │   ├── inferecord/
 │   │   ├── results/
@@ -31,8 +33,9 @@ EasyYolo/
 │   ├── 基础前后端/
 │   │   ├── 推理数据流文档.md (14.5 KB)
 │   │   ├── 管理数据流文档.md (16.3 KB)
-│   │   └── 训练数据流文档.md (20.7 KB)
-│   └── 日志.md (5.6 KB)
+│   │   └── 训练数据流文档.md (23.1 KB)
+│   ├── 开发日志.md (18.4 KB)
+│   └── 记录.md (11.8 KB)
 ├── frontend/
 │   ├── assets/
 │   │   └── icon.png (472.2 KB)
@@ -44,24 +47,27 @@ EasyYolo/
 │   │   ├── components/
 │   │   │   ├── batch.css (2.5 KB)
 │   │   │   ├── buttons.css (6.7 KB)
-│   │   │   ├── details.css (3.3 KB)
+│   │   │   ├── details.css (4.8 KB)
 │   │   │   ├── history.css (2.9 KB)
 │   │   │   ├── inference.css (1.4 KB)
-│   │   │   ├── modals.css (7.3 KB)
+│   │   │   ├── modals.css (8.8 KB)
 │   │   │   ├── sidebar.css (2.5 KB)
 │   │   │   └── training.css (8.8 KB)
 │   │   ├── utils/
 │   │   │   └── animations.css (3.4 KB)
 │   │   └── style.css (1.6 KB)
 │   ├── js/
-│   │   ├── api.js (4.9 KB)
-│   │   ├── config.js (175.0 B)
-│   │   ├── dom.js (5.2 KB)
-│   │   ├── events.js (62.0 KB)
+│   │   ├── api.js (5.1 KB)
+│   │   ├── config.js (344.0 B)
+│   │   ├── dom.js (5.7 KB)
+│   │   ├── events.js (17.2 KB)
+│   │   ├── inferring.js (5.6 KB)
 │   │   ├── main.js (596.0 B)
+│   │   ├── modals.js (3.6 KB)
 │   │   ├── state.js (864.0 B)
-│   │   └── ui.js (22.2 KB)
-│   └── index.html (40.5 KB)
+│   │   ├── training.js (40.7 KB)
+│   │   └── ui.js (27.2 KB)
+│   └── index.html (39.5 KB)
 ├── frontend-vue/
 │   ├── public/
 │   │   └── favicon.ico (4.2 KB)
@@ -97,9 +103,9 @@ EasyYolo/
 │   └── yolo/
 ├── runs/
 │   └── detect/
-├── README.md (1.3 KB)
-├── clean_history.py (1.6 KB)
-├── frontend-js.py (2.0 KB)
+├── README.md (2.1 KB)
+├── clean_history.py (2.2 KB)
+├── frontend-js.py (2.4 KB)
 ├── frontend-vue.py (2.4 KB)
 ├── generate_structure.py (6.1 KB)
 ├── main.py (628.0 B)
@@ -109,7 +115,7 @@ EasyYolo/
 ├── 启动JS前端.bat (282.0 B)
 ├── 启动Vue前端.bat (300.0 B)
 ├── 启动后端.bat (514.0 B)
-└── 项目结构.txt (3.3 KB)
+└── 项目结构.txt (4.8 KB)
 
 ============================================================
 忽略的文件夹/文件:

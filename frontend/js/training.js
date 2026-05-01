@@ -10,9 +10,9 @@ import { showMessage, showConfirm, showThreeChoice } from './modals.js';
 
 // ===== 默认训练参数 =====
 export const trainParams = {
-    epochs: 50,
-    patience: 20,
-    batch: 16,
+    epochs: 60,
+    patience: 15,
+    batch: 12,
     imgsz: 640,
     optimizer: 'auto',
     lr0: 0.01,
@@ -36,7 +36,7 @@ export const trainParams = {
     mixup: 0.0,
     copy_paste: 0.0,
     seed: 42,
-    workers: 8,
+    workers: 4,
     device: '',
     amp: true
 };

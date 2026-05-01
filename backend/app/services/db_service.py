@@ -53,13 +53,32 @@ class TrainingHistory(Base):
     dataset = Column(String)                                             # 数据集名称
     parameters = Column(String)                                          # 训练参数 (JSON 字符串)
     description = Column(String, default="")                              # 模型介绍
-    final_metrics = Column(String, default="")                            # 训练完成时最终指标 (JSON 字符串)
+    best_metrics = Column(String, default="")                             # 训练过程中最佳一轮的指标 (JSON 字符串)
+    best_epoch = Column(Integer, default=0)                               # 最佳一轮是第几轮
     early_stopped = Column(Integer, default=0)                            # 是否早停完成 (0=正常完成, 1=早停完成)
     early_stop_epoch = Column(Integer, default=0)                         # 早停时的轮次 (0=未早停)
+    eval_table = Column(String, default="")                                # 每类评估指标表 (JSON 字符串)
     created_at = Column(DateTime, default=datetime.now)                  # 训练完成时间
 
 # 自动创建表 (如果不存在)
 Base.metadata.create_all(bind=engine)
+
+# 兼容旧数据库：新增字段的迁移
+try:
+    with engine.connect() as conn:
+        conn.exec_driver_sql("ALTER TABLE training_history ADD COLUMN best_metrics VARCHAR DEFAULT ''")
+except Exception:
+    pass
+try:
+    with engine.connect() as conn:
+        conn.exec_driver_sql("ALTER TABLE training_history ADD COLUMN best_epoch INTEGER DEFAULT 0")
+except Exception:
+    pass
+try:
+    with engine.connect() as conn:
+        conn.exec_driver_sql("ALTER TABLE training_history ADD COLUMN eval_table VARCHAR DEFAULT ''")
+except Exception:
+    pass
 
 # ---------------------------------------------------------
 # 3. 业务逻辑服务 (Service)
@@ -200,7 +219,7 @@ class DBService:
 
     # --------------- 训练记录相关 -------------------
 
-    def add_training_record(self, model_name: str, base_model: str, dataset: str, parameters: str, description: str = "", final_metrics: str = "", early_stopped: int = 0, early_stop_epoch: int = 0):
+    def add_training_record(self, model_name: str, base_model: str, dataset: str, parameters: str, description: str = "", best_metrics: str = "", best_epoch: int = 0, early_stopped: int = 0, early_stop_epoch: int = 0, eval_table: str = ""):
         """新增/更新一次训练历史入库"""
         db = self._get_db()
         try:
@@ -211,9 +230,11 @@ class DBService:
                 existing.dataset = dataset
                 existing.parameters = parameters
                 existing.description = description
-                existing.final_metrics = final_metrics
+                existing.best_metrics = best_metrics
+                existing.best_epoch = best_epoch
                 existing.early_stopped = early_stopped
                 existing.early_stop_epoch = early_stop_epoch
+                existing.eval_table = eval_table
                 existing.created_at = datetime.now()
             else:
                 new_record = TrainingHistory(
@@ -222,9 +243,11 @@ class DBService:
                     dataset=dataset,
                     parameters=parameters,
                     description=description,
-                    final_metrics=final_metrics,
+                    best_metrics=best_metrics,
+                    best_epoch=best_epoch,
                     early_stopped=early_stopped,
-                    early_stop_epoch=early_stop_epoch
+                    early_stop_epoch=early_stop_epoch,
+                    eval_table=eval_table
                 )
                 db.add(new_record)
             db.commit()
@@ -246,9 +269,11 @@ class DBService:
                     "dataset": record.dataset,
                     "parameters": record.parameters,
                     "description": record.description or "",
-                    "final_metrics": record.final_metrics or "",
+                    "best_metrics": record.best_metrics or "",
+                    "best_epoch": record.best_epoch or 0,
                     "early_stopped": record.early_stopped or 0,
                     "early_stop_epoch": record.early_stop_epoch or 0,
+                    "eval_table": record.eval_table or "",
                     "time": record.created_at.strftime("%Y-%m-%d %H:%M:%S") if record.created_at else ""
                 }
             return None

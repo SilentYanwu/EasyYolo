@@ -2,10 +2,12 @@ import os
 import shutil
 import json
 import zipfile
+import glob
 import threading
 import time
 import gc
 import torch
+import yaml
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
 from ultralytics import YOLO
@@ -25,7 +27,10 @@ training_state = {
     "start_time": 0,          # 训练开始时间戳
     "last_epoch_time": 0,     # 上一轮结束时间戳
     "early_stopped": False,   # 是否早停完成
-    "early_stop_epoch": 0     # 早停时的轮次
+    "early_stop_epoch": 0,    # 早停时的轮次
+    "best_metrics": {},       # 训练过程中最佳一轮的指标
+    "best_epoch": 0,          # 最佳一轮是第几轮
+    "best_fitness": -1.0      # 最佳 fitness 值，用于比较
 }
 
 # 训练停止事件
@@ -111,6 +116,9 @@ class TrainingService:
             training_state["last_epoch_time"] = time.time()
             training_state["early_stopped"] = False
             training_state["early_stop_epoch"] = 0
+            training_state["best_metrics"] = {}
+            training_state["best_epoch"] = 0
+            training_state["best_fitness"] = -1.0
 
         # 重置停止事件
         global stop_training_event
@@ -217,6 +225,223 @@ class TrainingService:
                     "Dfl Loss": dfl_loss,
                 }
 
+            # 从验证集标签文件中统计每类图片数和实例数
+            def _count_val_labels(data_yaml_path, class_names):
+                images_per_cls = {}
+                instances_per_cls = {}
+                try:
+                    with open(data_yaml_path, 'r', encoding='utf-8') as f:
+                        data_yaml = yaml.safe_load(f)
+                    base_path = data_yaml.get('path', '') or ''
+                    val_rel = data_yaml.get('val', '') or ''
+                    if not val_rel:
+                        print("[EvalTable] YAML 中无 val 字段，跳过标签统计")
+                        return images_per_cls, instances_per_cls
+                    yaml_dir = os.path.dirname(os.path.abspath(data_yaml_path))
+
+                    # 解析验证集图片目录的绝对路径
+                    if base_path and os.path.isabs(base_path):
+                        val_img_dir = os.path.join(base_path, val_rel)
+                    elif base_path:
+                        val_img_dir = os.path.join(yaml_dir, base_path, val_rel)
+                    else:
+                        val_img_dir = os.path.join(yaml_dir, val_rel)
+                    val_img_dir = os.path.normpath(val_img_dir)
+
+                    # 候选 labels 目录列表
+                    candidates = []
+                    # 1) images -> labels 替换
+                    candidates.append(val_img_dir.replace('images', 'labels'))
+                    # 2) 同级 labels 目录下的 val 子目录
+                    candidates.append(os.path.join(os.path.dirname(val_img_dir), 'labels', os.path.basename(val_img_dir)))
+                    # 3) 数据集的根目录下的 labels 目录（NEU-DET 常见结构）
+                    if base_path and os.path.isabs(base_path):
+                        dataset_root = base_path
+                    else:
+                        dataset_root = yaml_dir
+                    candidates.append(os.path.join(dataset_root, 'labels', os.path.basename(val_img_dir)))
+
+                    label_dir = None
+                    for cand in candidates:
+                        cand = os.path.normpath(cand)
+                        if os.path.isdir(cand):
+                            label_dir = cand
+                            break
+                    if not label_dir:
+                        print(f"[EvalTable] 未找到 labels 目录, 尝试的路径: {candidates[:3]}")
+                        return images_per_cls, instances_per_cls
+
+                    label_files = glob.glob(os.path.join(label_dir, '*.txt'))
+                    if not label_files:
+                        print(f"[EvalTable] labels 目录为空: {label_dir}")
+                        return images_per_cls, instances_per_cls
+
+                    for lf in label_files:
+                        classes_in_image = set()
+                        with open(lf, 'r') as lf_handle:
+                            for line in lf_handle:
+                                parts = line.strip().split()
+                                if parts:
+                                    try:
+                                        cls_id = int(parts[0])
+                                        cls_name = class_names.get(cls_id)
+                                        if cls_name:
+                                            instances_per_cls[cls_name] = instances_per_cls.get(cls_name, 0) + 1
+                                            classes_in_image.add(cls_name)
+                                    except ValueError:
+                                        pass
+                        for cn in classes_in_image:
+                            images_per_cls[cn] = images_per_cls.get(cn, 0) + 1
+                    print(f"[EvalTable] 从 {len(label_files)} 个标签文件统计: {sum(instances_per_cls.values())} 个实例")
+                except Exception as e:
+                    print(f"[EvalTable] 统计标签失败: {e}")
+                return images_per_cls, instances_per_cls
+
+            # 从训练结果中提取每类评估指标表
+            def _extract_eval_table(results, model, data_yaml_path):
+                results_dict = getattr(results, 'results_dict', {}) or {}
+                class_names = dict(model.names) if model.names else {}
+                print(f"[EvalTable] results_dict keys: {sorted(results_dict.keys())}")
+
+                def _get_metric(metrics_dict, key_patterns, default=0):
+                    for pattern in key_patterns:
+                        for k, v in metrics_dict.items():
+                            if pattern.lower() in k.lower():
+                                try:
+                                    return round(float(v), 4)
+                                except (TypeError, ValueError):
+                                    pass
+                    return default
+
+                def _get_per_class_array(metrics_dict, key_patterns):
+                    for pattern in key_patterns:
+                        for k, v in metrics_dict.items():
+                            if pattern.lower() in k.lower() and hasattr(v, '__iter__') and not isinstance(v, str):
+                                try:
+                                    return [round(float(x), 4) for x in v]
+                                except (TypeError, ValueError):
+                                    pass
+                    return None
+
+                # 尝试从 results_dict 中提取 per-class 数组
+                per_class_p = _get_per_class_array(results_dict, ['precision(B)_per_class', 'precision_per_class'])
+                per_class_r = _get_per_class_array(results_dict, ['recall(B)_per_class', 'recall_per_class'])
+                per_class_map50 = _get_per_class_array(results_dict, ['mAP50(B)_per_class', 'mAP50_per_class'])
+                per_class_map50_95 = _get_per_class_array(results_dict, ['mAP50-95(B)_per_class', 'mAP50-95_per_class'])
+
+                # Fallback 1: results.maps / results.box / results.ap 等对象属性
+                box = getattr(results, 'box', None)
+                if per_class_p is None and box is not None:
+                    try:
+                        arr = getattr(box, 'p', None)
+                        if arr is not None and hasattr(arr, '__iter__') and not isinstance(arr, str):
+                            per_class_p = [round(float(x), 4) for x in arr]
+                            print(f"[EvalTable] 从 results.box.p 提取 per-class P: {per_class_p}")
+                    except Exception:
+                        pass
+                if per_class_r is None and box is not None:
+                    try:
+                        arr = getattr(box, 'r', None)
+                        if arr is not None and hasattr(arr, '__iter__') and not isinstance(arr, str):
+                            per_class_r = [round(float(x), 4) for x in arr]
+                            print(f"[EvalTable] 从 results.box.r 提取 per-class R: {per_class_r}")
+                    except Exception:
+                        pass
+                if per_class_map50 is None and box is not None:
+                    ap50_arr = getattr(box, 'ap50', None)
+                    if ap50_arr is not None:
+                        try:
+                            # BaseTensor 兼用 .cpu().numpy() / .tolist() / 直接 float()
+                            vals = ap50_arr
+                            if hasattr(vals, 'cpu'):
+                                vals = vals.cpu()
+                            if hasattr(vals, 'numpy'):
+                                vals = vals.numpy()
+                            if hasattr(vals, 'tolist'):
+                                vals = vals.tolist()
+                            # 现在 vals 应该是 Python list 或类似
+                            if isinstance(vals, (list, tuple)):
+                                per_class_map50 = [round(float(x), 4) for x in vals]
+                            else:
+                                # 可能是标量，用 float()
+                                per_class_map50 = [round(float(vals), 4)]
+                            print(f"[EvalTable] 从 results.box.ap50 提取 per-class mAP50: {per_class_map50}")
+                        except Exception as e:
+                            print(f"[EvalTable] results.box.ap50 提取失败: {e}")
+                if per_class_map50_95 is None:
+                    maps_attr = getattr(results, 'maps', None)
+                    if maps_attr is not None:
+                        try:
+                            per_class_map50_95 = [round(float(x), 4) for x in maps_attr]
+                            print(f"[EvalTable] 从 results.maps 提取 per-class mAP50-95: {per_class_map50_95}")
+                        except (TypeError, ValueError):
+                            pass
+                if per_class_map50_95 is None and box is not None:
+                    try:
+                        arr = getattr(box, 'maps', None) or getattr(box, 'ap', None)
+                        if arr is not None and hasattr(arr, '__iter__') and not isinstance(arr, str):
+                            per_class_map50_95 = [round(float(x), 4) for x in arr]
+                            print(f"[EvalTable] 从 results.box 提取 per-class mAP50-95: {per_class_map50_95}")
+                    except Exception:
+                        pass
+
+                # 从验证集标签统计 Images/Instances
+                images_per_cls, instances_per_cls = _count_val_labels(data_yaml_path, class_names)
+
+                rows = []
+                total_images = sum(images_per_cls.values())
+                total_instances = sum(instances_per_cls.values())
+
+                overall_p = _get_metric(results_dict, ['precision(B)', 'precision'])
+                overall_r = _get_metric(results_dict, ['recall(B)', 'recall'])
+                overall_map50 = _get_metric(results_dict, ['mAP50(B)', 'mAP50'])
+                overall_map50_95 = _get_metric(results_dict, ['mAP50-95(B)', 'mAP50-95'])
+
+                rows.append({
+                    'class': 'all',
+                    'images': total_images,
+                    'instances': total_instances,
+                    'p': overall_p,
+                    'r': overall_r,
+                    'map50': overall_map50,
+                    'map50_95': overall_map50_95
+                })
+
+                for cls_id in sorted(class_names.keys()):
+                    cls_name = class_names[cls_id]
+                    row = {
+                        'class': cls_name,
+                        'images': images_per_cls.get(cls_name, 0),
+                        'instances': instances_per_cls.get(cls_name, 0),
+                        'p': per_class_p[cls_id] if per_class_p and cls_id < len(per_class_p) else 0,
+                        'r': per_class_r[cls_id] if per_class_r and cls_id < len(per_class_r) else 0,
+                        'map50': per_class_map50[cls_id] if per_class_map50 and cls_id < len(per_class_map50) else 0,
+                        'map50_95': per_class_map50_95[cls_id] if per_class_map50_95 and cls_id < len(per_class_map50_95) else 0
+                    }
+                    rows.append(row)
+
+                # 如果上面的 per-class 都没取到，尝试逐个 key 匹配
+                has_per_class = any(a is not None for a in [per_class_p, per_class_r, per_class_map50, per_class_map50_95])
+                if not has_per_class:
+                    for i, (cls_id, cls_name) in enumerate(class_names.items()):
+                        row = rows[i + 1]
+                        for metric_key in ['mAP50(B)', 'mAP50-95(B)', 'precision(B)', 'recall(B)']:
+                            for suffix in [f'/{cls_name}', f'/class_{cls_id}', f'_{cls_id}']:
+                                full_key = f'metrics/{metric_key}{suffix}'
+                                if full_key in results_dict:
+                                    val = round(float(results_dict[full_key]), 4)
+                                    if 'mAP50-95' in metric_key:
+                                        row['map50_95'] = val
+                                    elif 'mAP50' in metric_key:
+                                        row['map50'] = val
+                                    elif 'precision' in metric_key.lower():
+                                        row['p'] = val
+                                    elif 'recall' in metric_key.lower():
+                                        row['r'] = val
+
+                print(f"[EvalTable] 提取完成: {len(rows)} 行 (含 all)")
+                return json.dumps(rows, ensure_ascii=False)
+
             # 回调函数中每batch开始的时候检查是否需要停止训练
             def on_train_batch_start(trainer):
                 _ = trainer
@@ -226,10 +451,17 @@ class TrainingService:
             def on_train_epoch_end(trainer):
                 current_epoch = getattr(trainer, "epoch", 0) + 1
                 eta = _compute_eta(current_epoch)
+                current_metrics = _extract_metrics(trainer)
+                # 追踪最佳一轮：比较 fitness 值
+                current_fitness = float(getattr(trainer, "fitness", 0) or 0)
                 with training_lock:
                     training_state["progress"] = current_epoch
-                    training_state["metrics"] = _extract_metrics(trainer)
+                    training_state["metrics"] = current_metrics
                     training_state["eta"] = eta
+                    if current_fitness > training_state["best_fitness"]:
+                        training_state["best_fitness"] = current_fitness
+                        training_state["best_epoch"] = current_epoch
+                        training_state["best_metrics"] = dict(current_metrics)
                 _stop_now()
 
             # 绑定回调
@@ -364,9 +596,9 @@ class TrainingService:
             # C. 记录到数据库
             # dataset 可能只是个 yaml 路径字符串，前端发过来的是纯名字或带 data.yaml，这里保留纯名字
             dataset_name_clean = os.path.basename(dataset_yaml_path)
-            
-            # 将经过回填校正后的最终指标序列化为 JSON 存入数据库
-            final_metrics_json = json.dumps(training_state.get("metrics", {}), ensure_ascii=False)
+
+            # 提取每类评估指标表
+            eval_table_json = _extract_eval_table(results, model, actual_dataset_yaml_path)
 
             db_service.add_training_record(
                 model_name=final_model_filename,
@@ -374,9 +606,11 @@ class TrainingService:
                 dataset=dataset_name_clean,
                 parameters=json.dumps(params, ensure_ascii=False),
                 description=description,
-                final_metrics=final_metrics_json,
+                best_metrics=json.dumps(training_state.get("best_metrics", {}), ensure_ascii=False),
+                best_epoch=training_state.get("best_epoch", 0),
                 early_stopped=1 if training_state.get("early_stopped") else 0,
-                early_stop_epoch=training_state.get("early_stop_epoch", 0)
+                early_stop_epoch=training_state.get("early_stop_epoch", 0),
+                eval_table=eval_table_json
             )
 
             # D. 清理临时 runs 目录 (因为我们已经把产物迁移到了 models/trained 和 trainchart 里)

@@ -385,19 +385,39 @@ export const ui = {
             }
         }
 
-        // 渲染最终训练指标面板
+        // 渲染最佳一轮训练指标面板
         dom.detailsFinalMetricsGrid.innerHTML = '';
         let metricsObj = {};
-        if (detailsData.final_metrics && detailsData.final_metrics.trim()) {
-            try { metricsObj = JSON.parse(detailsData.final_metrics); } catch (e) { }
+        if (detailsData.best_metrics && detailsData.best_metrics.trim()) {
+            try { metricsObj = JSON.parse(detailsData.best_metrics); } catch (e) { }
         }
 
         const hasEarlyStopInfo = !!detailsData.early_stopped;
+        const hasBestEpoch = !!(detailsData.best_epoch && detailsData.best_epoch > 0);
         const hasMetrics = Object.keys(metricsObj).length > 0;
 
-        if (hasEarlyStopInfo || hasMetrics) {
+        if (hasEarlyStopInfo || hasBestEpoch || hasMetrics) {
             dom.finalMetricsSection.style.display = 'block';
 
+            // 最佳轮次卡片
+            if (hasBestEpoch) {
+                let totalEpochs = 0;
+                try {
+                    const paramsObj = JSON.parse(detailsData.parameters || '{}');
+                    totalEpochs = paramsObj.epochs || 0;
+                } catch (e) { }
+
+                const bestEpochCard = document.createElement('div');
+                bestEpochCard.style.cssText = 'background: #0f3460; padding: 12px; border-radius: 6px; border: 1px solid #38bdf8; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+                bestEpochCard.innerHTML = `
+                    <div style="color: #7dd3fc; font-size: 13px; margin-bottom: 5px;">最佳轮次</div>
+                    <div style="color: #38bdf8; font-size: 18px; font-weight: bold; margin-bottom: 6px;">第 ${detailsData.best_epoch} 轮</div>
+                    <div style="color: #93c5fd; font-size: 11px; line-height: 1.4;">共 ${totalEpochs || '--'} 轮，Fitness 最高的那一轮</div>
+                `;
+                dom.detailsFinalMetricsGrid.appendChild(bestEpochCard);
+            }
+
+            // 早停卡片（原逻辑不变）
             if (hasEarlyStopInfo) {
                 let totalEpochs = 0;
                 try {
@@ -428,6 +448,62 @@ export const ui = {
             }
         } else {
             dom.finalMetricsSection.style.display = 'none';
+        }
+
+        // 渲染每类评估指标表格
+        if (dom.detailsEvalTableContainer && dom.evalTableSection) {
+            dom.detailsEvalTableContainer.innerHTML = '';
+            if (detailsData.eval_table && detailsData.eval_table.trim()) {
+                try {
+                    const evalRows = JSON.parse(detailsData.eval_table);
+                    if (evalRows.length > 0) {
+                        dom.evalTableSection.style.display = 'block';
+
+                        const table = document.createElement('table');
+                        table.className = 'eval-table';
+
+                        const thead = document.createElement('thead');
+                        thead.innerHTML = `
+                            <tr>
+                                <th>Class</th>
+                                <th>Images</th>
+                                <th>Instances</th>
+                                <th>Box(P)</th>
+                                <th>R</th>
+                                <th>mAP50</th>
+                                <th>mAP50-95</th>
+                            </tr>
+                        `;
+                        table.appendChild(thead);
+
+                        const tbody = document.createElement('tbody');
+                        evalRows.forEach(row => {
+                            const tr = document.createElement('tr');
+                            const isAll = row.class === 'all';
+                            tr.className = isAll ? 'row-all' : '';
+                            tr.innerHTML = `
+                                <td class="class-name">${row.class}</td>
+                                <td class="col-images">${row.images || 0}</td>
+                                <td class="col-instances">${row.instances || 0}</td>
+                                <td class="col-p">${row.p || 0}</td>
+                                <td class="col-r">${row.r || 0}</td>
+                                <td class="col-map50">${row.map50 || 0}</td>
+                                <td class="col-map50-95">${row.map50_95 || 0}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                        table.appendChild(tbody);
+
+                        dom.detailsEvalTableContainer.appendChild(table);
+                    } else {
+                        dom.evalTableSection.style.display = 'none';
+                    }
+                } catch (e) {
+                    dom.evalTableSection.style.display = 'none';
+                }
+            } else {
+                dom.evalTableSection.style.display = 'none';
+            }
         }
 
         // 渲染图表

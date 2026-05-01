@@ -16,8 +16,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=os.path.abspath(FRONTEND_DIR), **kwargs)
 
     def end_headers(self):
-        # 解决某些环境下的 CORS 问题 (虽然前端通常不需要，但为了保险)
+        # CORS 兼容
         self.send_header('Access-Control-Allow-Origin', '*')
+        # 禁止缓存 JS/CSS/HTML，每次请求都向服务器验证是否有新版本（304 机制仍生效）
+        self.send_header('Cache-Control', 'no-cache')
         super().end_headers()
 
 def run_server():
