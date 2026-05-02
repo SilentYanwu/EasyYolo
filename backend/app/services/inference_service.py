@@ -32,6 +32,7 @@ def predict_single(file_path: str, unique_filename: str, conf: float = 0.25) -> 
     result_filename = f"result_{unique_filename}"
     result_path = os.path.join(settings.RESULT_DIR, result_filename)
 
+    # 生成推理结果的 URL
     original_url = f"http://127.0.0.1:8000/inferecord/uploads/{unique_filename}"
     result_url = f"http://127.0.0.1:8000/inferecord/results/{result_filename}"
 

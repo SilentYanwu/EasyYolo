@@ -5,7 +5,7 @@ import ModelSidebar from '@/components/sidebar/ModelSidebar.vue'
 import { useModelStore } from '@/stores/models'
 import { useTrainingStore, defaultTrainParams } from '@/stores/training'
 import { useAppStore } from '@/stores/app'
-import * as trainingApi from '@/api/training'
+import * as trainingApi from '@/api/trainingapi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MAX_TRAINING_TASKS, QUEUE_POLL_INTERVAL } from '@/config'
 
@@ -98,7 +98,7 @@ const dupState = ref<{
   inputEl: HTMLInputElement | null
 }>({ visible: false, datasetName: '', existingPath: '', mode: 'single', taskIndex: -1, file: null, inputEl: null })
 
-// 数据集上传 — 单任务
+// 单任务数据集上传 — 先检测重名，无重名则直接上传
 async function handleDatasetUpload(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -122,6 +122,7 @@ async function handleDatasetUpload(e: Event) {
   }
 }
 
+// 执行单任务数据集上传 → 保存返回路径
 async function doSingleUpload(file: File, input: HTMLInputElement) {
   datasetName.value = '上传并解压中...'
   try {
@@ -137,9 +138,11 @@ async function doSingleUpload(file: File, input: HTMLInputElement) {
 // 多任务文件输入映射
 const multiTaskInputs = ref<Record<number, HTMLInputElement>>({})
 
+// 触发多任务指定索引的文件选择对话框
 function triggerMultiUpload(idx: number) {
   multiTaskInputs.value[idx]?.click()
 }
+// 多任务数据集上传 — 先检测重名，无重名则直接上传
 async function handleMultiTaskDatasetUpload(e: Event, taskIndex: number) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -163,6 +166,7 @@ async function handleMultiTaskDatasetUpload(e: Event, taskIndex: number) {
   }
 }
 
+// 执行多任务数据集上传 → 更新任务的 datasetPath/datasetName
 async function doMultiUpload(file: File, taskIndex: number, input: HTMLInputElement) {
   trainingStore.updateTask(taskIndex, { datasetName: '上传并解压中...' })
   try {
@@ -178,7 +182,7 @@ async function doMultiUpload(file: File, taskIndex: number, input: HTMLInputElem
   input.value = ''
 }
 
-// 三选回调
+// 三选 → 覆盖上传：重新走上传流程
 function onDupOverwrite() {
   const s = dupState.value
   dupState.value = { visible: false, datasetName: '', existingPath: '', mode: 'single', taskIndex: -1, file: null, inputEl: null }
@@ -189,6 +193,7 @@ function onDupOverwrite() {
   }
 }
 
+// 三选 → 复用已有：跳过上传，直接用已有数据集路径
 function onDupReuse() {
   const s = dupState.value
   dupState.value = { visible: false, datasetName: '', existingPath: '', mode: 'single', taskIndex: -1, file: null, inputEl: null }
@@ -206,6 +211,7 @@ function onDupReuse() {
   if (s.inputEl) s.inputEl.value = ''
 }
 
+// 三选 → 取消：清空数据状态，放弃上传
 function onDupCancel() {
   const s = dupState.value
   dupState.value = { visible: false, datasetName: '', existingPath: '', mode: 'single', taskIndex: -1, file: null, inputEl: null }
@@ -214,13 +220,14 @@ function onDupCancel() {
   if (s.inputEl) s.inputEl.value = ''
 }
 
+// 将上传成功的路径信息存到单任务状态和 Store
 function setDatasetResult(data: any) {
   datasetPath.value = data.dataset_path
   datasetName.value = data.dataset_path.split('/').pop() || '已就绪'
   trainingStore.setDatasetPath(data.dataset_path, datasetName.value)
 }
 
-// 单任务开始训练
+// 校验必填字段 → 调用训练 API 启动单任务训练
 async function startSingleTraining() {
   if (!newModelName.value.trim()) {
     ElMessage.warning('请输入新模型名称')
@@ -248,6 +255,7 @@ async function startSingleTraining() {
   }
 }
 
+// 停止单任务训练（带确认框）
 async function stopCurrentTraining() {
   try {
     await ElMessageBox.confirm('确定要停止当前训练吗？', '确认停止', {
@@ -260,7 +268,7 @@ async function stopCurrentTraining() {
   } catch { /* cancelled */ }
 }
 
-// 多任务操作
+// 添加一个新的训练任务到队列
 function addNewTask() {
   if (trainingStore.tasks.length >= MAX_TRAINING_TASKS) {
     ElMessage.warning(`最多支持${MAX_TRAINING_TASKS}个任务`)
@@ -269,11 +277,12 @@ function addNewTask() {
   trainingStore.addTask()
 }
 
+// 从队列中删除指定任务
 function deleteTaskByIndex(index: number) {
   trainingStore.deleteTask(index)
 }
 
-// 队列训练
+// 验证所有任务 → 启动队列训练 → 执行第一个任务
 async function startQueue() {
   // 验证所有任务
   for (let i = 0; i < trainingStore.tasks.length; i++) {
@@ -292,6 +301,7 @@ async function startQueue() {
   await executeCurrentTask()
 }
 
+// 执行队列当前任务 → 处理 modelSource 依赖 → 调用训练 API → 等待完成
 async function executeCurrentTask() {
   const task = trainingStore.currentTask
   if (!task) {
@@ -327,6 +337,7 @@ async function executeCurrentTask() {
   }
 }
 
+// 以 QUEUE_POLL_INTERVAL 间隔轮询，等待当前任务完成/早停/失败后流转
 function waitForTaskCompletion(): Promise<void> {
   return new Promise((resolve) => {
     const check = setInterval(async () => {
@@ -361,6 +372,7 @@ function waitForTaskCompletion(): Promise<void> {
   })
 }
 
+// 队列全部完成后的收尾 → 提示 + 刷新页面
 function finishQueue() {
   trainingStore.isQueueRunning = false
   trainingStore.queueStatus = 'completed'
@@ -370,6 +382,7 @@ function finishQueue() {
   setTimeout(() => window.location.reload(), 2000)
 }
 
+// 停止队列训练（带确认框），重置所有运行中/等待中的任务
 async function stopQueue() {
   try {
     await ElMessageBox.confirm('确定要停止队列训练吗？', '确认停止队列', {
@@ -390,7 +403,7 @@ async function stopQueue() {
   } catch { /* cancelled */ }
 }
 
-// 参数对话框
+// 打开参数编辑对话框 — taskIndex=-1 为单任务，>=0 为多任务指定索引
 function openParamsDialog(taskIndex: number = -1) {
   editingTaskIndex.value = taskIndex
   if (taskIndex >= 0) {
@@ -402,6 +415,7 @@ function openParamsDialog(taskIndex: number = -1) {
   showParamsDialog.value = true
 }
 
+// 保存参数副本 → 单任务更新 Store / 多任务更新对应任务的参数
 function saveParams() {
   if (editingTaskIndex.value >= 0) {
     trainingStore.updateTask(editingTaskIndex.value, { parameters: { ...localParams.value } })
@@ -412,7 +426,7 @@ function saveParams() {
   ElMessage.success('参数已保存')
 }
 
-// 模式切换
+// 切换单任务/多任务模式（训练中禁止切换）
 function switchMode(mode: 'single' | 'multi') {
   if (trainingStore.isTraining && mode !== trainingStore.trainingMode) {
     ElMessage.warning('训练进行中，无法切换模式')
@@ -421,12 +435,13 @@ function switchMode(mode: 'single' | 'multi') {
   trainingStore.setTrainingMode(mode)
 }
 
-// 模型对话框（复用）
+// 打开模型上传对话框
 function openUploadDialog() {
   uploadFile.value = null
   uploadModelName.value = ''
   showUploadDialog.value = true
 }
+// 确认上传模型
 async function confirmUpload() {
   if (!uploadFile.value || !uploadModelName.value.trim()) return
   try {
@@ -437,12 +452,14 @@ async function confirmUpload() {
     ElMessage.error('上传失败')
   }
 }
+// 打开重命名对话框（预填旧名称去掉 .pt 后缀）
 function openRenameDialog(name: string, category: string) {
   renameOldName.value = name
   renameCategory.value = category
   renameNewName.value = name.replace('.pt', '')
   showRenameDialog.value = true
 }
+// 确认重命名 → 调用 Store → 提示结果
 async function confirmRename() {
   if (!renameNewName.value.trim()) return
   try {
@@ -451,11 +468,13 @@ async function confirmRename() {
     ElMessage.success('重命名成功！')
   } catch (e: any) { ElMessage.error('重命名失败') }
 }
+// 打开删除确认对话框
 function openDeleteDialog(name: string, category: string) {
   deleteModelName.value = name
   deleteCategory.value = category
   showDeleteDialog.value = true
 }
+// 确认删除模型
 async function confirmDelete() {
   try {
     await modelStore.deleteModel(deleteModelName.value, deleteCategory.value)
@@ -463,11 +482,13 @@ async function confirmDelete() {
     ElMessage.success('删除成功！')
   } catch (e: any) { ElMessage.error('删除失败') }
 }
+// 打开模型介绍编辑对话框
 function openEditDescDialog(name: string, _category: string) {
   editDescModelName.value = name
   editDescText.value = ''
   showEditDescDialog.value = true
 }
+// 确认修改介绍 → 调用 Store → 提示结果
 async function confirmEditDesc() {
   try {
     await modelStore.updateDescription(editDescModelName.value, editDescText.value)

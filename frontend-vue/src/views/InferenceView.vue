@@ -4,7 +4,7 @@ import { ref, onMounted, watch } from 'vue'
 import ModelSidebar from '@/components/sidebar/ModelSidebar.vue'
 import { useModelStore } from '@/stores/models'
 import { useAppStore } from '@/stores/app'
-import * as inferenceApi from '@/api/inference'
+import * as inferenceApi from '@/api/inferenceapi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { HistoryItem } from '@/types'
 import { MAX_THUMBNAILS } from '@/config'
@@ -64,6 +64,7 @@ const editDescText = ref('')
 
 // 侧边栏显示
 
+// 处理图片文件选择（单张/批量），生成预览缩略图
 function onImageSelect(e: Event) {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files || [])
@@ -103,6 +104,7 @@ function onImageSelect(e: Event) {
   if (imageInput.value) imageInput.value.value = ''
 }
 
+// 处理视频文件选择，生成预览 URL
 function onVideoSelect(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -116,6 +118,7 @@ function onVideoSelect(e: Event) {
   if (videoInput.value) videoInput.value.value = ''
 }
 
+// 根据文件类型分发到单张/批量/视频推理
 async function handlePredict() {
   if (selectedFiles.value.length === 0) return
   predicting.value = true
@@ -137,6 +140,7 @@ async function handlePredict() {
   }
 }
 
+// 单张图片推理 → 调用 API → 显示结果
 async function handleSinglePredict(file: File) {
   progressPercent.value = 0
   progressText.value = '0/1'
@@ -151,6 +155,7 @@ async function handleSinglePredict(file: File) {
   await fetchHistory()
 }
 
+// 批量图片推理 → SSE 流式读取进度，实时更新进度条和结果缩略图
 async function handleBatchPredict(files: File[]) {
   progressPercent.value = 0
   progressText.value = `0/${files.length}`
@@ -188,6 +193,7 @@ async function handleBatchPredict(files: File[]) {
   await fetchHistory()
 }
 
+// 视频推理 → SSE 流式读取每帧进度，完成后加载输出视频
 async function handleVideoPredict(file: File) {
   progressPercent.value = 0
   progressText.value = '0%'
@@ -226,6 +232,7 @@ async function handleVideoPredict(file: File) {
   await fetchHistory()
 }
 
+// 获取当前模型的推理历史记录列表
 async function fetchHistory() {
   loadingHistory.value = true
   try {
@@ -235,6 +242,7 @@ async function fetchHistory() {
   finally { loadingHistory.value = false }
 }
 
+// 点击历史项 → 预览当时的原始文件和推理结果
 function viewHistory(item: HistoryItem) {
   const isVid = item.result.toLowerCase().endsWith('.mp4')
   isVideo.value = isVid
@@ -250,6 +258,7 @@ function viewHistory(item: HistoryItem) {
   downloadUrl.value = item.result
 }
 
+// 删除单条历史记录（带确认框）
 async function deleteHistory(id: number) {
   try {
     await ElMessageBox.confirm('确定要删除这条历史记录吗？', '确认删除', {
@@ -263,6 +272,7 @@ async function deleteHistory(id: number) {
   } catch { /* cancelled */ }
 }
 
+// 清空当前模型的所有历史记录（带确认框）
 async function clearAllHistory() {
   try {
     await ElMessageBox.confirm('确定要清空所有历史记录吗？此操作不可恢复。', '确认清空', {
@@ -277,12 +287,14 @@ async function clearAllHistory() {
 }
 
 // 模型管理对话框
+// 打开模型上传对话框
 function openUploadDialog() {
   uploadFile.value = null
   uploadModelName.value = ''
   showUploadDialog.value = true
 }
 
+// 确认上传 → 调用 Store → 提示结果
 async function confirmUpload() {
   if (!uploadFile.value) {
     ElMessage.warning('请选择模型文件')
@@ -301,6 +313,7 @@ async function confirmUpload() {
   }
 }
 
+// 打开重命名对话框（预填旧名称去掉 .pt 后缀）
 function openRenameDialog(name: string, category: string) {
   renameOldName.value = name
   renameCategory.value = category
@@ -308,6 +321,7 @@ function openRenameDialog(name: string, category: string) {
   showRenameDialog.value = true
 }
 
+// 确认重命名 → 调用 Store → 提示结果
 async function confirmRename() {
   if (!renameNewName.value.trim()) return
   try {
@@ -319,12 +333,14 @@ async function confirmRename() {
   }
 }
 
+// 打开删除确认对话框
 function openDeleteDialog(name: string, category: string) {
   deleteModelName.value = name
   deleteCategory.value = category
   showDeleteDialog.value = true
 }
 
+// 确认删除模型 → 调用 Store → 提示结果
 async function confirmDelete() {
   try {
     await modelStore.deleteModel(deleteModelName.value, deleteCategory.value)
@@ -335,12 +351,14 @@ async function confirmDelete() {
   }
 }
 
+// 打开模型介绍编辑对话框
 function openEditDescDialog(name: string, _category: string) {
   editDescModelName.value = name
   editDescText.value = ''
   showEditDescDialog.value = true
 }
 
+// 确认修改介绍 → 调用 Store → 提示结果
 async function confirmEditDesc() {
   try {
     await modelStore.updateDescription(editDescModelName.value, editDescText.value)
@@ -351,6 +369,7 @@ async function confirmEditDesc() {
   }
 }
 
+// 切换结果视频的播放/暂停状态
 function togglePlayPause() {
   const video = document.getElementById('resultVideo') as HTMLVideoElement
   if (!video) return

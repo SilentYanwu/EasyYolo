@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ModelSidebar from '@/components/sidebar/ModelSidebar.vue'
 import { useModelStore } from '@/stores/models'
 import { useAppStore } from '@/stores/app'
-import * as trainingApi from '@/api/training'
+import * as trainingApi from '@/api/trainingapi'
 import { ElMessage } from 'element-plus'
 import type { ModelDetail, EvalTableRow } from '@/types'
 import { API_BASE } from '@/config'
@@ -103,6 +103,7 @@ const chartNames = [
   'labels.jpg', 'labels_correlogram.jpg'
 ]
 
+// 加载模型详情 — 查询训练记录 → 解析指标/评估表格/图表 URL
 async function loadDetail(modelName: string) {
   if (!modelName) return
   loading.value = true
@@ -159,6 +160,7 @@ watch(() => appStore.detailsModelName, (name) => {
   }
 })
 
+// 导航到基础模型的详情页（仅当其为 trained 模型时有效）
 function navigateToBaseModel(baseModel: string) {
   if (!baseModel) return
   if (modelStore.models.trained.includes(baseModel)) {
@@ -168,9 +170,11 @@ function navigateToBaseModel(baseModel: string) {
 }
 
 // 模型管理对话框
+// 打开模型上传对话框
 async function openUploadDialog() {
   showUploadDialog.value = true
 }
+// 确认上传模型
 async function confirmUpload() {
   if (!uploadFile.value || !uploadModelName.value.trim()) return
   try {
@@ -179,12 +183,14 @@ async function confirmUpload() {
     ElMessage.success('模型上传成功！')
   } catch (e: any) { ElMessage.error('上传失败') }
 }
+// 打开重命名对话框（预填旧名称去掉 .pt 后缀）
 function openRenameDialog(name: string, category: string) {
   renameOldName.value = name
   renameCategory.value = category
   renameNewName.value = name.replace('.pt', '')
   showRenameDialog.value = true
 }
+// 确认重命名 → 同步详情页模型名
 async function confirmRename() {
   if (!renameNewName.value.trim()) return
   try {
@@ -196,11 +202,13 @@ async function confirmRename() {
     }
   } catch (e: any) { ElMessage.error('重命名失败') }
 }
+// 打开删除确认对话框
 function openDeleteDialog(name: string, category: string) {
   deleteModelName.value = name
   deleteCategory.value = category
   showDeleteDialog.value = true
 }
+// 确认删除 → 如果是当前查看的模型则清空详情
 async function confirmDelete() {
   try {
     await modelStore.deleteModel(deleteModelName.value, deleteCategory.value)
@@ -212,11 +220,13 @@ async function confirmDelete() {
     }
   } catch (e: any) { ElMessage.error('删除失败') }
 }
+// 打开模型介绍编辑对话框
 function openEditDescDialog(name: string, _category: string) {
   editDescModelName.value = name
   editDescText.value = ''
   showEditDescDialog.value = true
 }
+// 确认修改介绍 → 刷新详情页
 async function confirmEditDesc() {
   try {
     await modelStore.updateDescription(editDescModelName.value, editDescText.value)
@@ -229,6 +239,7 @@ async function confirmEditDesc() {
 }
 
 // 格式化指标值
+// 格式化指标数值 — 小数值保留更多小数位
 function formatMetric(val: number): string {
   if (val < 0.01) return val.toFixed(6)
   if (val < 1) return val.toFixed(4)

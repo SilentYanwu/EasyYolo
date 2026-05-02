@@ -23,10 +23,12 @@ const activeIdx = computed(() => {
   return idx >= 0 ? idx : 0
 })
 
+// 导航到指定路由页面
 function navigate(path: string) {
   router.push(path)
 }
 
+// 重新拉取模型列表（刷新按钮带动画反馈）
 async function refreshApp() {
   if (spinning.value) return
   spinning.value = true

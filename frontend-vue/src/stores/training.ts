@@ -1,7 +1,7 @@
 // 训练 Store — 单任务/多任务队列、参数管理、进度轮询
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import * as trainingApi from '@/api/training'
+import * as trainingApi from '@/api/trainingapi'
 import { useModelStore } from './models'
 import type { TrainingState, TrainingParams, TrainingTask } from '@/types'
 import { MAX_TRAINING_TASKS, TRAINING_POLL_INTERVAL } from '@/config'
@@ -52,21 +52,25 @@ export const useTrainingStore = defineStore('training', () => {
     return null
   })
 
+  // 切换单任务/多任务模式（持久化到 localStorage）
   function setTrainingMode(mode: 'single' | 'multi') {
     trainingMode.value = mode
     localStorage.setItem('trainingMode', mode)
   }
 
   // 单任务操作
+  // 记录上传数据集的路径和显示名
   function setDatasetPath(path: string, name: string) {
     uploadedDatasetPath.value = path
     uploadedDatasetName.value = name
   }
 
+  // 合并部分参数到当前训练参数
   function updateTrainParams(params: Partial<TrainingParams>) {
     Object.assign(trainParams.value, params)
   }
 
+  // 重置训练参数为默认值
   function resetTrainParams() {
     trainParams.value = { ...defaultTrainParams }
   }
@@ -75,6 +79,7 @@ export const useTrainingStore = defineStore('training', () => {
   let poller: ReturnType<typeof setInterval> | null = null
   let lastStatus = 'idle'
 
+  // 启动全局训练进度轮询器（TRAINING_POLL_INTERVAL 间隔），检测训练完成/失败/早停
   function startPoller() {
     if (poller) return
     poller = setInterval(async () => {
@@ -106,6 +111,7 @@ export const useTrainingStore = defineStore('training', () => {
     }, TRAINING_POLL_INTERVAL)
   }
 
+  // 停止全局轮询器
   function stopPoller() {
     if (poller) {
       clearInterval(poller)
@@ -114,6 +120,7 @@ export const useTrainingStore = defineStore('training', () => {
   }
 
   // 多任务操作
+  // 从 localStorage 恢复多任务队列状态（页面刷新后自动还原）
   function initFromStorage() {
     try {
       const saved = localStorage.getItem('multiTaskQueue')
@@ -127,6 +134,7 @@ export const useTrainingStore = defineStore('training', () => {
     } catch { /* ignore */ }
   }
 
+  // 将当前队列状态序列化到 localStorage
   function saveToStorage() {
     localStorage.setItem('multiTaskQueue', JSON.stringify({
       tasks: tasks.value,
@@ -136,6 +144,7 @@ export const useTrainingStore = defineStore('training', () => {
     }))
   }
 
+  // 创建一个新任务（包含默认参数，首任务默认 modelSource='existing'，后续默认 'previous'）
   function createTask(index: number): TrainingTask {
     const chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九']
     return {
@@ -156,6 +165,7 @@ export const useTrainingStore = defineStore('training', () => {
     }
   }
 
+  // 向队列末尾添加一个新任务
   function addTask() {
     if (tasks.value.length >= MAX_TRAINING_TASKS) {
       ElMessage.warning(`最多支持${MAX_TRAINING_TASKS}个任务`)
@@ -165,6 +175,7 @@ export const useTrainingStore = defineStore('training', () => {
     saveToStorage()
   }
 
+  // 删除指定位置的任务（自动修复后续任务的依赖关系和序号）
   function deleteTask(index: number) {
     if (isQueueRunning.value) {
       ElMessage.warning('队列运行中，请先停止')
@@ -186,12 +197,14 @@ export const useTrainingStore = defineStore('training', () => {
     saveToStorage()
   }
 
+  // 更新指定任务的属性（局部合并）
   function updateTask(index: number, updates: Partial<TrainingTask>) {
     if (index < 0 || index >= tasks.value.length) return
     Object.assign(tasks.value[index], updates)
     saveToStorage()
   }
 
+  // 将当前任务标记为完成，推进到下一个任务
   function moveToNextTask() {
     const task = tasks.value[currentTaskIndex.value]
     if (task) {
@@ -206,7 +219,7 @@ export const useTrainingStore = defineStore('training', () => {
     saveToStorage()
   }
 
-  // 重置所有
+  // 重置所有训练状态（单任务 + 轮询器）
   function reset() {
     uploadedDatasetPath.value = ''
     uploadedDatasetName.value = '未选择'

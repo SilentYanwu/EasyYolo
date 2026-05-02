@@ -7,13 +7,16 @@ export const useAppStore = defineStore('app', () => {
   const sidebarCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
   const detailsModelName = ref('')
 
+  // 页面切换时自动持久化到 localStorage
   watch(activePage, (val) => localStorage.setItem('activePage', val))
   watch(sidebarCollapsed, (val) => localStorage.setItem('sidebarCollapsed', String(val)))
 
+  // 切换到指定页面（更新 activePage，触发 TopNav 高亮和 router-view 渲染）
   function switchPage(page: string) {
     activePage.value = page
   }
 
+  // 展开/折叠侧边栏（状态持久化到 localStorage）
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }

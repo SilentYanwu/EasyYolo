@@ -20,9 +20,10 @@ const emit = defineEmits<{
   deleteModel: [name: string, category: string]
 }>()
 
+// 模型列表
 const modelStore = useModelStore()
 const appStore = useAppStore()
-
+// 根据模式决定显示哪些模型分类
 const sections = computed(() => {
   if (props.mode === 'training') return []
   if (props.mode === 'details') {
@@ -44,6 +45,7 @@ const ctxMenu = ref<{
   category: string
 }>({ visible: false, x: 0, y: 0, name: '', category: '' })
 
+// 在模型项右侧位置打开右键菜单
 function openCtxMenu(e: MouseEvent, name: string, category: string) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   ctxMenu.value = {
@@ -55,10 +57,12 @@ function openCtxMenu(e: MouseEvent, name: string, category: string) {
   }
 }
 
+// 关闭右键菜单
 function closeCtxMenu() {
   ctxMenu.value.visible = false
 }
 
+// 全局点击（含 capture 阶段）关闭右键菜单
 function onDocClick() {
   closeCtxMenu()
 }
@@ -66,6 +70,7 @@ function onDocClick() {
 onMounted(() => document.addEventListener('click', onDocClick, true))
 onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 
+// 点击模型名 → 推理模式切换模型 / 详情模式设置查看目标
 async function handleModelClick(name: string, category: string) {
   closeCtxMenu()
   if (props.mode === 'details') {

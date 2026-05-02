@@ -8,6 +8,7 @@ import { useTrainingStore } from '@/stores/training'
 const modelStore = useModelStore()
 const trainingStore = useTrainingStore()
 
+// 初始化
 onMounted(async () => {
   await modelStore.fetchModels()
   trainingStore.initFromStorage()

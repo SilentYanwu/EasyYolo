@@ -174,7 +174,12 @@ def delete_model(model_name: str, category: str):
         db_service.clear_history(model_name)
         # 移除相关的训练历史记录
         db_service.delete_training_record(model_name)
-            
+        # 删除对应的 trainchart 图表目录
+        chart_name = model_name.replace(".pt", "")
+        chart_dir = os.path.join(settings.TRAINCHART_DIR, chart_name)
+        if os.path.exists(chart_dir):
+            shutil.rmtree(chart_dir)
+
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
