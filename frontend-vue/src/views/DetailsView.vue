@@ -193,6 +193,15 @@ function openRenameDialog(name: string, category: string) {
 // 确认重命名 → 同步详情页模型名
 async function confirmRename() {
   if (!renameNewName.value.trim()) return
+  // 检查同类别下是否已有同名模型
+  const newFileName = renameNewName.value.trim().endsWith('.pt')
+    ? renameNewName.value.trim()
+    : renameNewName.value.trim() + '.pt'
+  const categoryModels = modelStore.models[renameCategory.value] || []
+  if (newFileName !== renameOldName.value && categoryModels.includes(newFileName)) {
+    ElMessage.warning('同类型模型名字不可重复')
+    return
+  }
   try {
     await modelStore.renameModel(renameOldName.value, renameNewName.value.trim(), renameCategory.value)
     showRenameDialog.value = false

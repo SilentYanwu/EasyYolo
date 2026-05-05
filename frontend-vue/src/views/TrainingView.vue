@@ -233,6 +233,14 @@ async function startSingleTraining() {
     ElMessage.warning('请输入新模型名称')
     return
   }
+  // 检查 trained 目录下是否已有同名模型
+  const modelFileName = newModelName.value.trim().endsWith('.pt')
+    ? newModelName.value.trim()
+    : newModelName.value.trim() + '.pt'
+  if (modelStore.models.trained.includes(modelFileName)) {
+    ElMessage.warning('同类型模型名字不可重复')
+    return
+  }
   if (!datasetPath.value) {
     ElMessage.warning('请上传数据集')
     return
@@ -288,8 +296,23 @@ async function startQueue() {
   for (let i = 0; i < trainingStore.tasks.length; i++) {
     const task = trainingStore.tasks[i]
     if (!task?.newModelName?.trim()) { ElMessage.warning(`任务${i+1}的新模型名称不能为空`); return }
+    const taskFileName = task.newModelName.trim().endsWith('.pt')
+      ? task.newModelName.trim()
+      : task.newModelName.trim() + '.pt'
+    if (modelStore.models.trained.includes(taskFileName)) { ElMessage.warning(`任务${i+1}的模型名与已有训练模型重复，同类型模型名字不可重复`); return }
     if (!task?.datasetPath) { ElMessage.warning(`任务${i+1}的数据集未上传`); return }
     if (task?.modelSource === 'existing' && !task?.baseModel) { ElMessage.warning(`任务${i+1}的基础模型未选择`); return }
+  }
+
+  // 检查队列内模型名是否唯一
+  const modelNames = trainingStore.tasks.map(t => {
+    const name = t.newModelName?.trim() || ''
+    return name.endsWith('.pt') ? name : name + '.pt'
+  })
+  const dupIndex = modelNames.findIndex((name, i) => modelNames.indexOf(name) !== i)
+  if (dupIndex !== -1) {
+    ElMessage.warning(`任务${dupIndex + 1}的模型名与队列内其他任务重复，请使用不同的模型名`)
+    return
   }
 
   trainingStore.isQueueRunning = true

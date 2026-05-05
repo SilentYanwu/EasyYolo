@@ -223,33 +223,19 @@ class DBService:
         """新增/更新一次训练历史入库"""
         db = self._get_db()
         try:
-            # 检查是否已存在同名记录 (训练同名模型覆盖时更新)
-            existing = db.query(TrainingHistory).filter(TrainingHistory.model_name == model_name).first()
-            if existing:
-                existing.base_model = base_model
-                existing.dataset = dataset
-                existing.parameters = parameters
-                existing.description = description
-                existing.best_metrics = best_metrics
-                existing.best_epoch = best_epoch
-                existing.early_stopped = early_stopped
-                existing.early_stop_epoch = early_stop_epoch
-                existing.eval_table = eval_table
-                existing.created_at = datetime.now()
-            else:
-                new_record = TrainingHistory(
-                    model_name=model_name,
-                    base_model=base_model,
-                    dataset=dataset,
-                    parameters=parameters,
-                    description=description,
-                    best_metrics=best_metrics,
-                    best_epoch=best_epoch,
-                    early_stopped=early_stopped,
-                    early_stop_epoch=early_stop_epoch,
-                    eval_table=eval_table
-                )
-                db.add(new_record)
+            new_record = TrainingHistory(
+                model_name=model_name,
+                base_model=base_model,
+                dataset=dataset,
+                parameters=parameters,
+                description=description,
+                best_metrics=best_metrics,
+                best_epoch=best_epoch,
+                early_stopped=early_stopped,
+                early_stop_epoch=early_stop_epoch,
+                eval_table=eval_table
+            )
+            db.add(new_record)
             db.commit()
         except Exception as e:
             db.rollback()

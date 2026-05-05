@@ -73,11 +73,15 @@ async def upload_model(file: UploadFile = File(...), custom_name: str = Form(...
         custom_name += ".pt"
     
     save_path = os.path.join(settings.MODEL_DIRS['yolo'], custom_name)
-    
+
+    # 同类型模型名不可重复
+    if os.path.exists(save_path):
+        raise HTTPException(status_code=400, detail="同类型模型名字不可重复")
+
     # 保存文件
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
+
     return {"status": "success", "filename": custom_name}
 
 @app.post("/rename_model")
@@ -108,7 +112,7 @@ def rename_model(
         raise HTTPException(status_code=404, detail="原模型文件不存在")
         
     if os.path.exists(new_path):
-        raise HTTPException(status_code=400, detail="新名称已存在，请换一个")
+        raise HTTPException(status_code=400, detail="同类型模型名字不可重复")
         
     try:
         os.rename(old_path, new_path)
@@ -293,6 +297,12 @@ def start_training(
     parameters: str = Form(...), # JSON string
     description: str = Form("") # 模型介绍，选填
 ):
+    # 同类型模型名不可重复（trained 目录）
+    model_filename = model_name if model_name.endswith(".pt") else model_name + ".pt"
+    trained_path = os.path.join(settings.MODEL_DIRS['trained'], model_filename)
+    if os.path.exists(trained_path):
+        raise HTTPException(status_code=400, detail="同类型模型名字不可重复")
+
     try:
         params_dict = json.loads(parameters)
         return training_service.start_training_task(model_name, base_model, dataset_yaml_path, params_dict, description)
