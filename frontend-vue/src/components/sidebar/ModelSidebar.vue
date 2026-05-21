@@ -101,7 +101,8 @@ async function handleModelClick(name: string, category: string) {
           <span class="step-num">1</span>
           <div>
             <b>选择基础模型</b>
-            <p>从下拉框选择预训练权重。yolo11n 最轻量，yolo11s 平衡，yolo11m 精确。</p>
+            <p>从下拉框选择预训练权重。n模型最轻量，s模型平衡，m模型精确。l和x模型适合大数据和高性能GPU，在此系统内没有部署。
+            </p>  
           </div>
         </div>
         <div class="guide-step" style="--accent: #8b5cf6;">

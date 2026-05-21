@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 训练页面 — 单任务/多任务队列、数据集上传、参数调节、训练启停与进度监控
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ModelSidebar from '@/components/sidebar/ModelSidebar.vue'
 import { useModelStore } from '@/stores/models'
 import { useTrainingStore, defaultTrainParams } from '@/stores/training'
@@ -8,10 +8,89 @@ import { useAppStore } from '@/stores/app'
 import * as trainingApi from '@/api/trainingapi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MAX_TRAINING_TASKS, QUEUE_POLL_INTERVAL } from '@/config'
+import type { TrainingParams } from '@/types'
 
 const modelStore = useModelStore()
 const trainingStore = useTrainingStore()
 const appStore = useAppStore()
+
+// —— 参数预设 ——
+interface ParamPreset { name: string; params: TrainingParams }
+
+const BUILTIN_PRESETS: ParamPreset[] = [
+  {
+    name: 'NEU-DET 论文方案',
+    params: {
+      epochs: 150, patience: 30, batch: 32, imgsz: 416,
+      optimizer: 'AdamW', lr0: 0.005, lrf: 0.01,
+      momentum: 0.9, weight_decay: 0.0005,
+      warmup_epochs: 5, warmup_momentum: 0.8, warmup_bias_lr: 0.1, cos_lr: true,
+      close_mosaic: 20,
+      hsv_h: 0.00, hsv_s: 0.0, hsv_v: 0.2,
+      degrees: 10, translate: 0.1, scale: 0.3, shear: 0.0, perspective: 0.0,
+      flipud: 0.1, fliplr: 0.5, mosaic: 1.0, mixup: 0.0, copy_paste: 0.0,
+      gaussian_noise: 0.2, gaussian_blur: 0.1,
+      seed: 42, workers: 4, device: '', amp: true
+    }
+  }
+]
+
+const userPresets = ref<ParamPreset[]>([])
+const selectedPreset = ref('')
+
+function loadPresets() {
+  try {
+    const raw = localStorage.getItem('trainingParamPresets')
+    if (raw) userPresets.value = JSON.parse(raw)
+  } catch { userPresets.value = [] }
+}
+
+function savePresetsToStorage() {
+  localStorage.setItem('trainingParamPresets', JSON.stringify(userPresets.value))
+}
+
+function applyPreset(name: string) {
+  const all = [...BUILTIN_PRESETS, ...userPresets.value]
+  const preset = all.find(p => p.name === name)
+  if (preset) {
+    localParams.value = { ...preset.params }
+    selectedPreset.value = name
+  }
+}
+
+async function saveAsPreset() {
+  try {
+    const { value: name } = await ElMessageBox.prompt('请输入预设名称', '保存预设', {
+      confirmButtonText: '保存', cancelButtonText: '取消'
+    })
+    if (!name.trim()) return
+    const existing = userPresets.value.findIndex(p => p.name === name)
+    if (existing >= 0) {
+      userPresets.value[existing] = { name, params: { ...localParams.value } }
+    } else {
+      userPresets.value.push({ name, params: { ...localParams.value } })
+    }
+    savePresetsToStorage()
+    selectedPreset.value = name
+    ElMessage.success(`预设「${name}」已保存`)
+  } catch { /* cancelled */ }
+}
+
+function deletePreset() {
+  const idx = userPresets.value.findIndex(p => p.name === selectedPreset.value)
+  if (idx < 0) return
+  userPresets.value.splice(idx, 1)
+  savePresetsToStorage()
+  selectedPreset.value = ''
+  ElMessage.success('预设已删除')
+}
+
+const allPresets = computed(() => [...BUILTIN_PRESETS, ...userPresets.value])
+const canDeleteSelected = computed(() =>
+  selectedPreset.value && !BUILTIN_PRESETS.some(p => p.name === selectedPreset.value)
+)
+
+loadPresets()
 
 // 单任务本地状态
 const newModelName = ref('')
@@ -48,11 +127,13 @@ const paramDesc: Record<string, string> = {
   Optimizer: '优化算法：auto 自动选择，SGD 经典，Adam/AdamW 自适应',
   lr0: '初始学习率，控制参数更新步长，过大不收敛过小收敛慢',
   lrf: '最终学习率因子，lr0 × lrf = 最终学习率',
-  Momentum: '动量因子，SGD 优化器的加速参数，帮助跳出局部最优',
+  Momentum: 'SGD 优化器的加速参数-动量因子/AdamW 优化器中的一阶矩衰减系数',
   'Weight Decay': '权重衰减系数（L2 正则化），防止过拟合',
   'Warmup Epochs': '学习率预热轮数，从 0 逐步升至 lr0，防止初期震荡',
   'Warmup Momentum': '预热阶段的初始动量值，逐步升至设定动量',
+  'Warmup Bias LR': '预热阶段偏置项的学习率，通常略低于 lr0',
   'Cos LR': '余弦学习率调度，学习率按余弦曲线下降，训练更平滑',
+  'Close Mosaic': '训练最后 N 轮关闭 Mosaic 增强，通常设为 总轮数的 10%—20% 以稳定收敛',
   hsv_h: '色相（Hue）随机扰动范围，增强颜色不变性',
   hsv_s: '饱和度（Saturation）随机扰动范围',
   hsv_v: '明度（Value）随机扰动范围，模拟不同光照条件',
@@ -66,6 +147,8 @@ const paramDesc: Record<string, string> = {
   mosaic: '马赛克增强概率，将 4 张图拼为 1 张，丰富背景多样性',
   mixup: 'Mixup 增强概率，混合两张图及其标签',
   'copy_paste': '实例复制粘贴增强概率，增加小目标样本',
+  'gaussian_noise': '高斯噪声增强概率，模拟传感器噪声，提升鲁棒性（自定义增强）',
+  'gaussian_blur': '高斯模糊增强概率，模拟轻微离焦，提升鲁棒性（自定义增强）',
   Seed: '随机种子，固定后可复现训练结果',
   Workers: '数据加载的 CPU 线程数，设为 CPU 核心数以内',
   Device: '训练设备，留空自动检测，指定如 0 表示第 1 块 GPU',
@@ -345,6 +428,8 @@ async function executeCurrentTask() {
       task.newModelName, baseModel,
       task.datasetPath, task.parameters, task.description
     )
+    // 确认训练已启动：轮询直到状态为 training，最多等 30 秒
+    await waitForTrainingStart()
     // 等待任务完成
     await waitForTaskCompletion()
   } catch (e: any) {
@@ -360,13 +445,35 @@ async function executeCurrentTask() {
   }
 }
 
+// 确认训练已启动：轮询直到 status === 'training'，最多等 30 秒
+function waitForTrainingStart(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const start = Date.now()
+    const check = setInterval(async () => {
+      try {
+        const res = await fetch('/api/training_progress')
+        const data = await res.json()
+        if (data.status === 'training') {
+          clearInterval(check)
+          resolve()
+        } else if (Date.now() - start > 30000) {
+          clearInterval(check)
+          reject(new Error('训练启动超时，请检查后端状态'))
+        }
+      } catch {
+        // 网络错误继续重试
+      }
+    }, 1000)
+  })
+}
+
 // 以 QUEUE_POLL_INTERVAL 间隔轮询，等待当前任务完成/早停/失败后流转
 function waitForTaskCompletion(): Promise<void> {
   return new Promise((resolve) => {
     const check = setInterval(async () => {
       try {
-        const res = await trainingApi.getTrainingProgress()
-        const data = res.data
+        const res = await fetch('/api/training_progress')
+        const data = await res.json()
         trainingStore.trainingState = data
 
         if (data.status !== 'training') {
@@ -376,6 +483,7 @@ function waitForTaskCompletion(): Promise<void> {
             trainingStore.moveToNextTask()
             trainingStore.saveToStorage()
             if (trainingStore.isQueueRunning && trainingStore.currentTask) {
+              await new Promise(r => setTimeout(r, 5000))
               await executeCurrentTask()
             } else {
               finishQueue()
@@ -393,6 +501,45 @@ function waitForTaskCompletion(): Promise<void> {
       }
     }, QUEUE_POLL_INTERVAL)
   })
+}
+
+// 队列中断恢复：页面加载时检测是否有未完成的队列任务，有则自动恢复执行
+async function resumeQueueIfNeeded() {
+  if (!trainingStore.isQueueRunning) return
+  const task = trainingStore.currentTask
+  if (!task) return
+
+  try {
+    const res = await fetch('/api/training_progress')
+    const data = await res.json()
+
+    if (data.status === 'training') {
+      // 当前任务仍在训练中 → 恢复进度监控
+      trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'running' })
+      await waitForTaskCompletion()
+    } else if (data.status === 'success' || data.status === 'early_stopped') {
+      // 当前任务在浏览器关闭期间已完成 → 推进到下一任务
+      trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'completed' })
+      trainingStore.moveToNextTask()
+      trainingStore.saveToStorage()
+      if (trainingStore.isQueueRunning && trainingStore.currentTask) {
+        ElMessage.info('检测到队列训练中断，正在自动恢复...')
+        await executeCurrentTask()
+      } else {
+        finishQueue()
+      }
+    } else if (data.status === 'stopped' || data.status === 'error') {
+      // 当前任务失败 → 停止队列
+      trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'failed' })
+      trainingStore.isQueueRunning = false
+      trainingStore.queueStatus = 'stopped'
+      trainingStore.saveToStorage()
+      ElMessage.warning('队列已中断，当前任务未成功完成')
+    }
+    // status === 'idle'：后端可能已重启，状态丢失，无法安全恢复，不处理
+  } catch {
+    // 网络错误等，静默跳过，用户可手动恢复
+  }
 }
 
 // 队列全部完成后的收尾 → 提示 + 刷新页面
@@ -534,6 +681,11 @@ const statusLabel = computed(() => {
 })
 
 const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle')
+
+// 页面加载时检查是否有未完成的队列任务，有则自动恢复
+onMounted(() => {
+  resumeQueueIfNeeded()
+})
 </script>
 
 <template>
@@ -719,7 +871,7 @@ const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle
         <div class="param-grid">
           <div class="param-item"><el-tooltip :content="paramDesc['Epochs']" placement="top"><label>Epochs</label></el-tooltip><el-input-number v-model="localParams.epochs" :min="1" size="small" /></div>
           <div class="param-item"><el-tooltip :content="paramDesc['Patience']" placement="top"><label>Patience</label></el-tooltip><el-input-number v-model="localParams.patience" :min="0" size="small" /></div>
-          <div class="param-item"><el-tooltip :content="paramDesc['Batch Size']" placement="top"><label>Batch Size</label></el-tooltip><el-input-number v-model="localParams.batch" :min="1" size="small" /></div>
+          <div class="param-item"><el-tooltip :content="paramDesc['Batch Size']" placement="top"><label>Batch Size</label></el-tooltip><el-input-number v-model="localParams.batch" :min="-1" size="small" /></div>
           <div class="param-item"><el-tooltip :content="paramDesc['Image Size']" placement="top"><label>Image Size</label></el-tooltip><el-input-number v-model="localParams.imgsz" :min="32" :step="32" size="small" /></div>
         </div>
       </fieldset>
@@ -743,6 +895,7 @@ const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle
           <div class="param-item"><el-tooltip :content="paramDesc['Weight Decay']" placement="top"><label>Weight Decay</label></el-tooltip><el-input-number v-model="localParams.weight_decay" :step="0.0001" :precision="4" size="small" /></div>
           <div class="param-item"><el-tooltip :content="paramDesc['Warmup Epochs']" placement="top"><label>Warmup Epochs</label></el-tooltip><el-input-number v-model="localParams.warmup_epochs" :step="0.1" :precision="1" size="small" /></div>
           <div class="param-item"><el-tooltip :content="paramDesc['Warmup Momentum']" placement="top"><label>Warmup Momentum</label></el-tooltip><el-input-number v-model="localParams.warmup_momentum" :step="0.01" :precision="2" size="small" /></div>
+          <div class="param-item"><el-tooltip :content="paramDesc['Warmup Bias LR']" placement="top"><label>Warmup Bias LR</label></el-tooltip><el-input-number v-model="localParams.warmup_bias_lr" :step="0.01" :precision="2" size="small" /></div>
           <div class="param-item"><el-tooltip :content="paramDesc['Cos LR']" placement="top"><label>Cos LR</label></el-tooltip><el-switch v-model="localParams.cos_lr" size="small" /></div>
         </div>
       </fieldset>
@@ -767,6 +920,16 @@ const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle
         </div>
       </fieldset>
 
+      <!-- 自定义增强 -->
+      <fieldset class="param-fieldset">
+        <legend>自定义增强 (Custom Augmentation)</legend>
+        <div class="param-grid">
+          <div class="param-item"><el-tooltip :content="paramDesc['Close Mosaic']" placement="top"><label>Close Mosaic</label></el-tooltip><el-input-number v-model="localParams.close_mosaic" :min="0" size="small" /></div>
+          <div class="param-item"><el-tooltip :content="paramDesc['gaussian_noise']" placement="top"><label>gaussian_noise</label></el-tooltip><el-input-number v-model="localParams.gaussian_noise" :step="0.05" :precision="2" :min="0" :max="1" size="small" /></div>
+          <div class="param-item"><el-tooltip :content="paramDesc['gaussian_blur']" placement="top"><label>gaussian_blur</label></el-tooltip><el-input-number v-model="localParams.gaussian_blur" :step="0.05" :precision="2" :min="0" :max="1" size="small" /></div>
+        </div>
+      </fieldset>
+
       <!-- 系统设置 -->
       <fieldset class="param-fieldset">
         <legend>系统设置</legend>
@@ -779,8 +942,19 @@ const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle
       </fieldset>
 
       <template #footer>
-        <el-button @click="showParamsDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveParams">确认保存参数</el-button>
+        <div class="dialog-footer-row">
+          <div class="preset-bar">
+            <el-select v-model="selectedPreset" placeholder="选择预设方案..." size="small" style="width:200px" @change="applyPreset" clearable>
+              <el-option v-for="p in allPresets" :key="p.name" :label="p.name" :value="p.name" />
+            </el-select>
+            <el-button size="small" @click="saveAsPreset">保存预设</el-button>
+            <el-button size="small" type="danger" plain :disabled="!canDeleteSelected" @click="deletePreset">删除预设</el-button>
+          </div>
+          <div class="footer-actions">
+            <el-button @click="showParamsDialog = false">取消</el-button>
+            <el-button type="primary" @click="saveParams">确认保存参数</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
 
@@ -1205,5 +1379,26 @@ const hasDashboard = computed(() => trainingStore.trainingState.status !== 'idle
   font-size: 11px;
   color: #8a8a96;
   font-weight: 500;
+}
+
+.dialog-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.preset-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 </style>

@@ -1,7 +1,6 @@
 // 训练 Store — 单任务/多任务队列、参数管理、进度轮询
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import * as trainingApi from '@/api/trainingapi'
 import { useModelStore } from './models'
 import type { TrainingState, TrainingParams, TrainingTask } from '@/types'
 import { MAX_TRAINING_TASKS, TRAINING_POLL_INTERVAL } from '@/config'
@@ -12,10 +11,12 @@ export const defaultTrainParams: TrainingParams = {
   epochs: 60, patience: 15, batch: 12, imgsz: 640,
   optimizer: 'auto', lr0: 0.01, lrf: 0.01,
   momentum: 0.937, weight_decay: 0.0005,
-  warmup_epochs: 3.0, warmup_momentum: 0.8, cos_lr: false,
+  warmup_epochs: 3.0, warmup_momentum: 0.8, warmup_bias_lr: 0.1, cos_lr: false,
+  close_mosaic: 10,
   hsv_h: 0.015, hsv_s: 0.7, hsv_v: 0.4,
   degrees: 0.0, translate: 0.1, scale: 0.5, shear: 0.0, perspective: 0.0,
   flipud: 0.0, fliplr: 0.5, mosaic: 1.0, mixup: 0.0, copy_paste: 0.0,
+  gaussian_noise: 0.0, gaussian_blur: 0.0,
   seed: 42, workers: 4, device: '', amp: true
 }
 
@@ -84,8 +85,8 @@ export const useTrainingStore = defineStore('training', () => {
     if (poller) return
     poller = setInterval(async () => {
       try {
-        const res = await trainingApi.getTrainingProgress()
-        const data = res.data as TrainingState
+        const res = await fetch('/api/training_progress')
+        const data = await res.json() as TrainingState
         trainingState.value = data
 
         if (data.status !== 'training' && lastStatus === 'training') {

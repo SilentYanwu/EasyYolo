@@ -6,7 +6,9 @@ import glob
 import threading
 import time
 import gc
+import random
 import torch
+import torch.nn.functional as F
 import yaml
 from datetime import datetime
 from fastapi import UploadFile, HTTPException
@@ -14,6 +16,47 @@ from ultralytics import YOLO
 
 from backend.app.core.config import settings
 from backend.app.services.db_service import db_service
+
+
+class CustomAugCallback:
+    """自定义数据增强回调：在训练 batch 上追加高斯噪声与高斯模糊"""
+
+    def __init__(self, noise_prob=0.0, noise_var_min=0.001, noise_var_max=0.01,
+                 blur_prob=0.0, blur_kernels=(3,)):
+        self.noise_prob = noise_prob
+        self.noise_var_min = noise_var_min
+        self.noise_var_max = noise_var_max
+        self.blur_prob = blur_prob
+        self.blur_kernels = blur_kernels
+        self._enabled = noise_prob > 0 or blur_prob > 0
+
+    def apply(self, imgs):
+        """对已预处理的图像 batch 追加高斯噪声与高斯模糊 (imgs: (B, C, H, W), 归一化 [0, 1])"""
+        if not self._enabled:
+            return
+        B = imgs.shape[0]
+        device = imgs.device
+
+        for i in range(B):
+            img = imgs[i]
+
+            if self.noise_prob > 0 and torch.rand(1, device=device).item() < self.noise_prob:
+                var = self.noise_var_min + torch.rand(1, device=device).item() * (self.noise_var_max - self.noise_var_min)
+                noise = torch.randn_like(img).mul_(var ** 0.5)
+                img = (img + noise).clamp_(0, 1)
+
+            if self.blur_prob > 0 and torch.rand(1, device=device).item() < self.blur_prob:
+                k = self.blur_kernels[torch.randint(0, len(self.blur_kernels), (1,), device=device).item()]
+                sigma = 0.3 * ((k - 1) * 0.5 - 1) + 0.8
+                ax = torch.arange(k, dtype=torch.float32, device=device) - (k - 1) / 2
+                xx, yy = torch.meshgrid(ax, ax, indexing='ij')
+                kernel = torch.exp(-(xx * xx + yy * yy) / (2.0 * sigma * sigma))
+                kernel = kernel / kernel.sum()
+                kernel = kernel.view(1, 1, k, k).expand(img.shape[0], 1, k, k)
+                padded = F.pad(img.unsqueeze(0), (k // 2, k // 2, k // 2, k // 2), mode='reflect')
+                img = F.conv2d(padded, kernel, groups=img.shape[0]).squeeze_(0).clamp_(0, 1)
+
+            imgs[i] = img
 
 # 全局训练状态单例 (只允许同时跑一个训练任务)
 training_state = {
@@ -442,11 +485,6 @@ class TrainingService:
                 print(f"[EvalTable] 提取完成: {len(rows)} 行 (含 all)")
                 return json.dumps(rows, ensure_ascii=False)
 
-            # 回调函数中每batch开始的时候检查是否需要停止训练
-            def on_train_batch_start(trainer):
-                _ = trainer
-                _stop_now()
-
             # 每epoch结束时更新进度和指标，并计算 ETA
             def on_train_epoch_end(trainer):
                 current_epoch = getattr(trainer, "epoch", 0) + 1
@@ -464,14 +502,65 @@ class TrainingService:
                         training_state["best_metrics"] = dict(current_metrics)
                 _stop_now()
 
-            # 绑定回调
+            # 3. 处理训练参数
+            # 过滤掉无法序列化或无意义的选项
+            for key in list(params.keys()):
+                if params[key] == "":
+                    del params[key]
+
+            int_params = ["epochs", "patience", "batch", "imgsz", "workers", "seed", "close_mosaic"]
+            float_params = ["lr0", "lrf", "momentum", "weight_decay", "warmup_epochs", "warmup_momentum",
+                           "warmup_bias_lr",
+                           "hsv_h", "hsv_s", "hsv_v", "degrees", "translate", "scale", "shear",
+                           "perspective", "flipud", "fliplr", "mosaic", "mixup", "copy_paste",
+                           "gaussian_noise", "gaussian_blur"]
+            bool_params = ["cos_lr", "amp"]
+
+            for p in int_params:
+                if p in params: params[p] = int(params[p])
+            for p in float_params:
+                if p in params: params[p] = float(params[p])
+            for p in bool_params:
+                if p in params:
+                    if isinstance(params[p], str):
+                        params[p] = params[p].lower() == 'true'
+                    else:
+                        params[p] = bool(params[p])
+
+            # 提取自定义增强参数（不传给 ultralytics，由 CustomAugCallback 自行消费）
+            noise_prob = float(params.pop("gaussian_noise", 0))
+            blur_prob = float(params.pop("gaussian_blur", 0))
+
+            # ---- EasyYolo 自定义增强 (monkey-patch preprocess_batch) ----
+            # 恢复为 ultralytics 出厂行为：删除从 aug_callback = ... 到
+            # model.add_callback("on_train_start", _patch_preprocess_batch) 为止的代码，
+            # 并将下方的 on_train_batch_start 回调恢复为仅做 _stop_now()
+            aug_callback = CustomAugCallback(noise_prob=noise_prob, blur_prob=blur_prob)
+
+            def _patch_preprocess_batch(trainer):
+                """训练开始前将自定义增强注入 preprocess_batch"""
+                _orig = trainer.preprocess_batch
+
+                def _augmented(batch):
+                    batch = _orig(batch)
+                    aug_callback.apply(batch['img'])
+                    return batch
+
+                trainer.preprocess_batch = _augmented
+
+            model.add_callback("on_train_start", _patch_preprocess_batch)
+
+            # 训练终止检查
+            def on_train_batch_start(trainer):
+                _stop_now()
+
             model.add_callback("on_train_batch_start", on_train_batch_start)
             model.add_callback("on_train_epoch_end", on_train_epoch_end)
 
-            # 3. 开始训练
+            # 4. 开始训练
             # 设置 output 跑在 runs 目录下，每个任务单独一个项目名，就叫 model_name
             actual_dataset_yaml_path = os.path.join(dataset_yaml_path, "data.yaml").replace("\\", "/")
-            
+
             # 使用项目和名字参数，比如 runs/detect/model_name
             project_dir = os.path.join(settings.BASE_DIR, "runs", "detect").replace("\\", "/")
             training_kwargs = {
@@ -481,30 +570,6 @@ class TrainingService:
                 "exist_ok": True,
                 "plots": True,  # 强制生成所有图表 (F1/P/R/PR 曲线 + labels_correlogram)
             }
-            # 合并用户参数 (params里的字典解包)
-            # 要确保 params 类型正确
-            # 过滤掉无法序列化或无意义的选项
-            for key in list(params.keys()):
-                if params[key] == "":
-                    del params[key]
-
-            int_params = ["epochs", "patience", "batch", "imgsz", "workers", "seed"]
-            float_params = ["lr0", "lrf", "momentum", "weight_decay", "warmup_epochs", "warmup_momentum", 
-                           "hsv_h", "hsv_s", "hsv_v", "degrees", "translate", "scale", "shear", 
-                           "perspective", "flipud", "fliplr", "mosaic", "mixup", "copy_paste"]
-            bool_params = ["cos_lr", "amp"]
-
-            for p in int_params:
-                if p in params: params[p] = int(params[p])
-            for p in float_params:
-                if p in params: params[p] = float(params[p])
-            for p in bool_params:
-                if p in params:
-                    # 前端传来的是布尔值或字符串形式的布尔
-                    if isinstance(params[p], str):
-                        params[p] = params[p].lower() == 'true'
-                    else:
-                        params[p] = bool(params[p])
 
             training_kwargs.update(params)
             
@@ -600,6 +665,10 @@ class TrainingService:
             # 提取每类评估指标表
             eval_table_json = _extract_eval_table(results, model, actual_dataset_yaml_path)
 
+            # 写回自定义增强参数以便数据库记录完整
+            params["gaussian_noise"] = noise_prob
+            params["gaussian_blur"] = blur_prob
+
             db_service.add_training_record(
                 model_name=final_model_filename,
                 base_model=base_model,
@@ -651,7 +720,8 @@ class TrainingService:
 
         # 5. 最后执行的代码块
         finally:
-            # A. 释放训练模型的 GPU 显存
+            # A. 显式释放训练模型及所有引用，确保 gc 能回收
+            del model
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()

@@ -49,9 +49,9 @@ class TrainingHistory(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     model_name = Column(String, unique=True, nullable=False, index=True) # 训练产生的文件名 (也是key)
-    base_model = Column(String)                                          # 基础模型名
-    dataset = Column(String)                                             # 数据集名称
-    parameters = Column(String)                                          # 训练参数 (JSON 字符串)
+    base_model = Column(String, nullable=False)                           # 基础模型名
+    dataset = Column(String, nullable=False)                              # 数据集名称
+    parameters = Column(String, nullable=False)                           # 训练参数 (JSON 字符串)
     description = Column(String, default="")                              # 模型介绍
     best_metrics = Column(String, default="")                             # 训练过程中最佳一轮的指标 (JSON 字符串)
     best_epoch = Column(Integer, default=0)                               # 最佳一轮是第几轮

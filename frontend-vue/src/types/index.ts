@@ -49,7 +49,9 @@ export interface TrainingParams {
   weight_decay: number
   warmup_epochs: number
   warmup_momentum: number
+  warmup_bias_lr: number
   cos_lr: boolean
+  close_mosaic: number
   hsv_h: number
   hsv_s: number
   hsv_v: number
@@ -63,6 +65,8 @@ export interface TrainingParams {
   mosaic: number
   mixup: number
   copy_paste: number
+  gaussian_noise: number
+  gaussian_blur: number
   seed: number
   workers: number
   device: string
