@@ -1,3 +1,4 @@
+# yolo_service.py - 定义 YOLO 模型加载、推理和视频处理的核心业务逻辑，支持模型自动下载和 GPU 显存管理
 import os
 import cv2
 import shutil

@@ -1,13 +1,16 @@
+# inference_service.py - 定义推理相关的核心业务逻辑，包括单张图片推理、批量推理生成器和视频推理生成器
 import os
 import json
 import shutil
 import asyncio
+import cv2
 from datetime import datetime
 from fastapi import UploadFile
 
 from backend.app.core.config import settings
 from backend.app.services.yolo_service import yolo_service
 from backend.app.services.db_service import db_service
+from backend.app.services.preprocess_service import preprocess_image
 
 
 async def save_upload_file(file: UploadFile) -> tuple[str, str]:
@@ -49,19 +52,31 @@ def predict_single(file_path: str, unique_filename: str, conf: float = 0.25) -> 
     }
 
 
-async def handle_single_predict(file: UploadFile, model_name: str, conf: float = 0.25) -> dict:
+async def handle_single_predict(
+    file: UploadFile,
+    model_name: str,
+    conf: float = 0.25,
+    preprocessing: dict | None = None,
+) -> dict:
     """
-    封装单张图片的完整流程：保存 -> 推理 -> 存库
+    封装单张图片的完整流程：保存 -> (可选预处理) -> 推理 -> 存库
     """
     # 1. 保存文件
     file_path, unique_filename = await save_upload_file(file)
 
-    # 2. 推理 (使用 to_thread 防止阻塞主线程)
+    # 2. 可选：图像预处理（在推理前增强输入质量）
+    if preprocessing:
+        img = cv2.imread(file_path)
+        if img is not None:
+            img = preprocess_image(img, preprocessing)
+            cv2.imwrite(file_path, img)
+
+    # 3. 推理 (使用 to_thread 防止阻塞主线程)
     result = await asyncio.to_thread(
         predict_single, file_path, unique_filename, conf
     )
 
-    # 3. 写入数据库
+    # 4. 写入数据库
     db_service.add_record(
         model_name,
         result["original_url"],

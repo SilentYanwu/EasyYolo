@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 推理页面 — 图片/视频上传、单张/批量预测、SSE 进度流、历史记录
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import ModelSidebar from '@/components/sidebar/ModelSidebar.vue'
 import { useModelStore } from '@/stores/models'
 import { useAppStore } from '@/stores/app'
@@ -62,7 +62,119 @@ const showEditDescDialog = ref(false)
 const editDescModelName = ref('')
 const editDescText = ref('')
 
-// 侧边栏显示
+// 摄像头模式
+const isCameraMode = ref(false)
+const cameraStream = ref<MediaStream | null>(null)
+const videoRef = ref<HTMLVideoElement>()
+const canCapture = ref(true) // 防抖：500ms 内禁止重复拍照
+
+// 预处理配置（CLAHE / 中值滤波 / 锐化 / 伽马校正）
+const showPreprocessDialog = ref(false)
+const preprocessConfig = ref({
+  clahe_enabled: false,
+  clahe_clip: 2.0,
+  clahe_tile: 8,
+  median_enabled: false,
+  median_kernel: 3,
+  sharpen_enabled: false,
+  sharpen_strength: 1.0,
+  gamma_enabled: false,
+  gamma_value: 1.0,
+})
+
+// 打开摄像头 → 获取视频流 → 绑定到 video 元素
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+    })
+    cameraStream.value = stream
+    isCameraMode.value = true
+    // 下一帧将 video 元素绑定流
+    await nextTick()
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+    }
+  } catch (e: any) {
+    ElMessage.error('无法打开摄像头: ' + (e.message || '未知错误'))
+    isCameraMode.value = false
+  }
+}
+
+// 关闭摄像头 → 停止所有轨道 → 清理状态
+function stopCamera() {
+  if (cameraStream.value) {
+    cameraStream.value.getTracks().forEach(track => track.stop())
+    cameraStream.value = null
+  }
+  isCameraMode.value = false
+  if (videoRef.value) {
+    videoRef.value.srcObject = null
+  }
+}
+
+// 切换摄像头开关
+function toggleCamera() {
+  if (isCameraMode.value) {
+    stopCamera()
+  } else {
+    startCamera()
+  }
+}
+
+// 从 video 捕获一帧 → 转为 JPEG Blob → 调用 API → 显示结果 → 刷新历史
+async function captureAndDetect() {
+  if (!canCapture.value || !videoRef.value) return
+  canCapture.value = false
+  predicting.value = true
+  showProgress.value = true
+  progressPercent.value = 0
+  progressText.value = ''
+  statusText.value = '拍照识别中...'
+
+  try {
+    const video = videoRef.value
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // 转为 JPEG Blob
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(b => {
+        if (b) resolve(b)
+        else reject(new Error('Canvas 转 Blob 失败'))
+      }, 'image/jpeg', 0.95)
+    })
+
+    // 构造文件名
+    const now = new Date()
+    const ts = now.getFullYear().toString() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') + '_' +
+      String(now.getHours()).padStart(2, '0') +
+      String(now.getMinutes()).padStart(2, '0') +
+      String(now.getSeconds()).padStart(2, '0')
+    const file = new File([blob], `${ts}_snapshot.jpg`, { type: 'image/jpeg' })
+
+    const res = await inferenceApi.predictCamera(file, { ...preprocessConfig.value })
+    resultImgSrc.value = res.data.result_url
+    showResultImg.value = true
+    showResultVideo.value = false
+    downloadUrl.value = res.data.result_url
+    progressPercent.value = 100
+    statusText.value = '完成'
+    ElMessage.success('拍照识别完成')
+    await fetchHistory()
+  } catch (e: any) {
+    ElMessage.error('拍照识别出错: ' + (e.message || '未知错误'))
+    statusText.value = '拍照识别出错'
+  } finally {
+    predicting.value = false
+    setTimeout(() => { canCapture.value = true }, 500)
+  }
+}
 
 // 处理图片文件选择（单张/批量），生成预览缩略图
 function onImageSelect(e: Event) {
@@ -386,6 +498,10 @@ onMounted(async () => {
     await fetchHistory()
   }
 })
+
+onUnmounted(() => {
+  stopCamera()
+})
 </script>
 
 <template>
@@ -408,6 +524,26 @@ onMounted(async () => {
           </svg>
         </button>
         <h1>图像识别推理</h1>
+        <button
+          :class="['camera-toggle-btn', { active: isCameraMode }]"
+          @click="toggleCamera"
+          :title="isCameraMode ? '关闭摄像头' : '打开摄像头拍照识别'"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 7l-5 3.75V7a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-3.75L23 17V7z"/>
+            <rect x="1" y="9" width="4" height="4" rx="1" v-if="isCameraMode" fill="#a78bfa" stroke="none"/>
+          </svg>
+        </button>
+        <button
+          class="preprocess-gear-btn"
+          @click="showPreprocessDialog = true"
+          title="摄像头预处理设置"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
       </div>
 
       <div class="workspace">
@@ -416,10 +552,10 @@ onMounted(async () => {
           <input ref="imageInput" type="file" accept="image/*" multiple hidden @change="onImageSelect">
           <input ref="videoInput" type="file" accept="video/*" hidden @change="onVideoSelect">
 
-          <el-button type="primary" @click="imageInput?.click()">上传图片</el-button>
-          <el-button @click="videoInput?.click()">上传视频</el-button>
-          <el-button type="success" :disabled="selectedFiles.length === 0 || predicting" :loading="predicting" @click="handlePredict">
-            {{ predicting ? '识别中...' : '开始识别' }}
+          <el-button type="primary" :disabled="isCameraMode" @click="imageInput?.click()">上传图片</el-button>
+          <el-button :disabled="isCameraMode" @click="videoInput?.click()">上传视频</el-button>
+          <el-button type="success" :disabled="selectedFiles.length === 0 && !isCameraMode || predicting" :loading="predicting" @click="isCameraMode ? captureAndDetect() : handlePredict()">
+            {{ isCameraMode ? (predicting ? '识别中...' : '拍照识别') : (predicting ? '识别中...' : '开始识别') }}
           </el-button>
           <span class="status-text">{{ statusText }}</span>
         </div>
@@ -448,9 +584,11 @@ onMounted(async () => {
           <div class="display-card">
             <div class="card-header"><h4>原始{{ isVideo ? '视频' : '图片' }}</h4></div>
             <div class="card-body">
-              <img v-if="!isVideo && originalImgSrc" :src="originalImgSrc" class="media-fit" alt="原始图片">
-              <video v-if="isVideo && originalVideoSrc" :src="originalVideoSrc" class="media-fit" controls muted playsinline></video>
-              <div v-if="!originalImgSrc && !originalVideoSrc" class="placeholder-text">等待上传...</div>
+              <!-- 摄像头实时预览 -->
+              <video v-if="isCameraMode" ref="videoRef" class="media-fit" autoplay playsinline muted></video>
+              <img v-else-if="!isVideo && originalImgSrc" :src="originalImgSrc" class="media-fit" alt="原始图片">
+              <video v-else-if="isVideo && originalVideoSrc" :src="originalVideoSrc" class="media-fit" controls muted playsinline></video>
+              <div v-else class="placeholder-text">{{ isCameraMode ? '摄像头未就绪...' : '等待上传...' }}</div>
             </div>
           </div>
 
@@ -497,6 +635,78 @@ onMounted(async () => {
     </main>
 
     <!-- 对话框 -->
+    <!-- 预处理设置对话框 -->
+    <el-dialog v-model="showPreprocessDialog" title="摄像头预处理设置" width="480px" :close-on-click-modal="false">
+      <div class="preprocess-section">
+        <!-- CLAHE -->
+        <div class="preprocess-item">
+          <div class="preprocess-header">
+            <el-switch v-model="preprocessConfig.clahe_enabled" size="small" />
+            <span class="preprocess-label">自适应直方图均衡化（CLAHE）</span>
+          </div>
+          <p class="preprocess-desc">分块对比度拉伸，增强裂纹、划痕等低对比度缺陷</p>
+          <div class="preprocess-params" v-if="preprocessConfig.clahe_enabled">
+            <div class="param-row">
+              <span class="param-name">Clip Limit</span>
+              <el-slider v-model="preprocessConfig.clahe_clip" :min="0.5" :max="5.0" :step="0.5" show-input size="small" class="param-slider" />
+            </div>
+            <div class="param-row">
+              <span class="param-name">Tile Size</span>
+              <el-slider v-model="preprocessConfig.clahe_tile" :min="4" :max="16" :step="2" show-input size="small" class="param-slider" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 中值滤波 -->
+        <div class="preprocess-item">
+          <div class="preprocess-header">
+            <el-switch v-model="preprocessConfig.median_enabled" size="small" />
+            <span class="preprocess-label">中值滤波</span>
+          </div>
+          <p class="preprocess-desc">去除弱光下产生的椒盐噪声，保留缺陷边缘</p>
+          <div class="preprocess-params" v-if="preprocessConfig.median_enabled">
+            <div class="param-row">
+              <span class="param-name">核大小</span>
+              <el-slider v-model="preprocessConfig.median_kernel" :min="3" :max="7" :step="2" show-input size="small" class="param-slider" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 锐化 -->
+        <div class="preprocess-item">
+          <div class="preprocess-header">
+            <el-switch v-model="preprocessConfig.sharpen_enabled" size="small" />
+            <span class="preprocess-label">拉普拉斯锐化</span>
+          </div>
+          <p class="preprocess-desc">边缘增强，使缺陷边界更清晰，便于模型定位</p>
+          <div class="preprocess-params" v-if="preprocessConfig.sharpen_enabled">
+            <div class="param-row">
+              <span class="param-name">强度</span>
+              <el-slider v-model="preprocessConfig.sharpen_strength" :min="0.2" :max="3.0" :step="0.2" show-input size="small" class="param-slider" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 伽马校正 -->
+        <div class="preprocess-item">
+          <div class="preprocess-header">
+            <el-switch v-model="preprocessConfig.gamma_enabled" size="small" />
+            <span class="preprocess-label">伽马校正</span>
+          </div>
+          <p class="preprocess-desc">调整亮度分布，补偿摄像头自动曝光偏差（&lt;1 提亮，&gt;1 压暗）</p>
+          <div class="preprocess-params" v-if="preprocessConfig.gamma_enabled">
+            <div class="param-row">
+              <span class="param-name">伽马值</span>
+              <el-slider v-model="preprocessConfig.gamma_value" :min="0.5" :max="2.0" :step="0.05" show-input size="small" class="param-slider" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showPreprocessDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="showUploadDialog" title="导入模型" width="420px" :close-on-click-modal="false">
       <el-upload
         :auto-upload="false"
@@ -785,6 +995,110 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #22222c, #22222c);
+}
+
+/* ---- Camera Toggle Button ---- */
+.camera-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #3e3e4e;
+  border-radius: 10px;
+  background: transparent;
+  color: #8a8a96;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  margin-left: 14px;
+}
+.camera-toggle-btn:hover {
+  color: #c4b5fd;
+  border-color: #7c6fb8;
+  background: rgba(167, 139, 250, 0.08);
+}
+.camera-toggle-btn.active {
+  color: #c4b5fd;
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.13);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.25);
+}
+
+/* ---- Preprocess Gear Button ---- */
+.preprocess-gear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid #3e3e4e;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8a96;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+.preprocess-gear-btn:hover {
+  color: #c4b5fd;
+  border-color: #7c6fb8;
+  background: rgba(167, 139, 250, 0.08);
+  transform: rotate(30deg);
+}
+
+/* ---- Preprocess Dialog ---- */
+.preprocess-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.preprocess-item {
+  padding: 12px 14px;
+  background: #2c2c37;
+  border: 1px solid #3e3e4e;
+  border-radius: 10px;
+}
+.preprocess-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.preprocess-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e8;
+}
+.preprocess-desc {
+  color: #8a8a96;
+  font-size: 12px;
+  margin: 4px 0 8px;
+  line-height: 1.5;
+}
+.preprocess-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.param-name {
+  color: #a0a0b0;
+  font-size: 12px;
+  font-weight: 500;
+  width: 75px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.param-slider {
+  flex: 1;
 }
 
 .card-actions { display: flex; gap: 6px; }

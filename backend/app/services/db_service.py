@@ -1,3 +1,4 @@
+# db_service.py - 定义数据库模型和服务类，负责推理历史记录和训练历史记录的增删改查
 import os
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, desc

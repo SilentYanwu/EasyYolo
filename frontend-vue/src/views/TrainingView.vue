@@ -375,6 +375,16 @@ function deleteTaskByIndex(index: number) {
 
 // 验证所有任务 → 启动队列训练 → 执行第一个任务
 async function startQueue() {
+  // 检查后端是否有训练任务正在进行中
+  try {
+    const res = await fetch('/api/training_progress')
+    const data = await res.json()
+    if (data.status === 'training') {
+      ElMessage.warning('已有训练任务正在进行中，请等待完成后再开始队列训练')
+      return
+    }
+  } catch { /* 网络错误则继续 */ }
+
   // 验证所有任务
   for (let i = 0; i < trainingStore.tasks.length; i++) {
     const task = trainingStore.tasks[i]
@@ -415,7 +425,6 @@ async function executeCurrentTask() {
     return
   }
 
-  trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'running' })
   let baseModel = task.baseModel
   if (task.modelSource === 'previous') {
     const prevTask = trainingStore.tasks[trainingStore.currentTaskIndex - 1]
@@ -428,10 +437,12 @@ async function executeCurrentTask() {
       task.newModelName, baseModel,
       task.datasetPath, task.parameters, task.description
     )
-    // 确认训练已启动：轮询直到状态为 training，最多等 30 秒
-    await waitForTrainingStart()
-    // 等待任务完成
-    await waitForTaskCompletion()
+    // 确认训练已启动：轮询直到 status === 'training' 且 model_name 匹配，最多等 30 秒
+    await waitForTrainingStart(task.newModelName)
+    // 训练确认启动后，更新任务状态为 running（蓝框出现）
+    trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'running' })
+    // 等待任务完成（通过 model_name 校验确保是本任务的完成信号）
+    await waitForTaskCompletion(task.newModelName)
   } catch (e: any) {
     trainingStore.updateTask(trainingStore.currentTaskIndex, {
       status: 'failed',
@@ -445,15 +456,15 @@ async function executeCurrentTask() {
   }
 }
 
-// 确认训练已启动：轮询直到 status === 'training'，最多等 30 秒
-function waitForTrainingStart(): Promise<void> {
+// 确认训练已启动：轮询直到 status === 'training' 且 model_name 匹配当前任务，最多等 30 秒
+function waitForTrainingStart(modelName: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const start = Date.now()
     const check = setInterval(async () => {
       try {
         const res = await fetch('/api/training_progress')
         const data = await res.json()
-        if (data.status === 'training') {
+        if (data.status === 'training' && data.model_name === modelName) {
           clearInterval(check)
           resolve()
         } else if (Date.now() - start > 30000) {
@@ -468,13 +479,17 @@ function waitForTrainingStart(): Promise<void> {
 }
 
 // 以 QUEUE_POLL_INTERVAL 间隔轮询，等待当前任务完成/早停/失败后流转
-function waitForTaskCompletion(): Promise<void> {
+// 通过 modelName 校验确保只响应当前任务的状态变化，避免前一任务的残留状态导致误判
+function waitForTaskCompletion(modelName: string): Promise<void> {
   return new Promise((resolve) => {
     const check = setInterval(async () => {
       try {
         const res = await fetch('/api/training_progress')
         const data = await res.json()
         trainingStore.trainingState = data
+
+        // 仅当 model_name 匹配当前任务时才处理状态变化
+        if (data.model_name !== modelName) return
 
         if (data.status !== 'training') {
           clearInterval(check)
@@ -513,10 +528,13 @@ async function resumeQueueIfNeeded() {
     const res = await fetch('/api/training_progress')
     const data = await res.json()
 
+    // 仅当 model_name 匹配当前任务时才处理
+    if (data.model_name !== task.newModelName) return
+
     if (data.status === 'training') {
       // 当前任务仍在训练中 → 恢复进度监控
       trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'running' })
-      await waitForTaskCompletion()
+      await waitForTaskCompletion(task.newModelName)
     } else if (data.status === 'success' || data.status === 'early_stopped') {
       // 当前任务在浏览器关闭期间已完成 → 推进到下一任务
       trainingStore.updateTask(trainingStore.currentTaskIndex, { status: 'completed' })

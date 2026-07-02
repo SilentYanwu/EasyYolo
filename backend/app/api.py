@@ -1,3 +1,4 @@
+# api.py - 定义 FastAPI 应用和所有 API 路由，处理模型管理、推理请求、训练任务等核心功能
 import os
 import shutil
 from typing import List
@@ -220,7 +221,32 @@ async def predict(file: UploadFile = File(...)):
         # 2. 调用封装好的服务函数（包含保存、推理和存库）
         result = await handle_single_predict(file, current_model_name)
         return result
-        
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 摄像头拍照推理接口（支持预处理参数：CLAHE/中值滤波/锐化/伽马校正）
+@app.post("/predict_camera")
+async def predict_camera(
+    file: UploadFile = File(...),
+    preprocessing: str = Form("{}"),
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File is not an image")
+
+    try:
+        # 解析预处理配置 JSON
+        pre_config = json.loads(preprocessing) if preprocessing else {}
+    except json.JSONDecodeError:
+        pre_config = {}
+
+    try:
+        result = await handle_single_predict(
+            file, current_model_name, preprocessing=pre_config
+        )
+        return result
     except Exception as e:
         import traceback
         traceback.print_exc()

@@ -1,3 +1,4 @@
+# training_service.py - 定义训练相关的核心业务逻辑，包括数据集处理、训练任务管理和训练状态跟踪
 import os
 import shutil
 import json

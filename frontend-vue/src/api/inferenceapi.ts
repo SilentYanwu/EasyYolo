@@ -10,6 +10,16 @@ export function predictSingle(file: File) {
   return request.post('/predict', fd)
 }
 
+// 摄像头拍照推理（可附带预处理配置）
+export function predictCamera(file: File, preprocessing?: Record<string, unknown>) {
+  const fd = new FormData()
+  fd.append('file', file)
+  if (preprocessing) {
+    fd.append('preprocessing', JSON.stringify(preprocessing))
+  }
+  return request.post('/predict_camera', fd)
+}
+
 // 批量图片推理（fetch + SSE 流式响应，后端逐张推送进度和结果）
 export function predictBatch(files: File[]): Promise<Response> {
   const fd = new FormData()

@@ -1,4 +1,4 @@
-
+# frontend-vue.py - 启动 Vue 前端开发服务器，自动安装依赖并打开浏览器
 import os
 import subprocess
 import sys

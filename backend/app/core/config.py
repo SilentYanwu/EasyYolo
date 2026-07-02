@@ -1,3 +1,4 @@
+# config.py - 定义项目中的路径和配置项
 import os
 
 class Settings:
